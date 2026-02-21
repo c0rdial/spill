@@ -130,13 +130,14 @@ function OnboardingPage() {
                     className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red"
                   />
                 </div>
-                <button
+                <motion.button
                   onClick={() => setStep("preferences")}
                   disabled={!name || !age}
+                  whileTap={{ scale: 0.97 }}
                   className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
                 >
                   Next
-                </button>
+                </motion.button>
               </>
             )}
 
@@ -162,13 +163,14 @@ function OnboardingPage() {
                   </label>
                   <ShowMeSelect value={showMe} onChange={setShowMe} />
                 </div>
-                <button
+                <motion.button
                   onClick={() => setStep("profile")}
                   disabled={!gender || showMe.length === 0}
+                  whileTap={{ scale: 0.97 }}
                   className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
                 >
                   Next
-                </button>
+                </motion.button>
               </>
             )}
 
@@ -200,12 +202,13 @@ function OnboardingPage() {
                     className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red"
                   />
                 </div>
-                <button
+                <motion.button
                   onClick={() => setStep("interests")}
+                  whileTap={{ scale: 0.97 }}
                   className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg transition-opacity"
                 >
                   Next
-                </button>
+                </motion.button>
               </>
             )}
 
@@ -224,13 +227,14 @@ function OnboardingPage() {
                     onChange={setInterests}
                   />
                 )}
-                <button
+                <motion.button
                   onClick={handleSubmit}
                   disabled={loading || interests.length < 3}
+                  whileTap={{ scale: 0.97 }}
                   className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
                 >
                   {loading ? "Saving..." : "Start spilling"}
-                </button>
+                </motion.button>
               </>
             )}
           </motion.div>

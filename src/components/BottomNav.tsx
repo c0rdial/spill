@@ -1,4 +1,5 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 
 const tabs = [
   {
@@ -52,7 +53,11 @@ export function BottomNav() {
                 {tab.label}
               </span>
               {isActive && (
-                <span className="absolute bottom-1 w-6 h-[2px] bg-spill-red rounded-full" />
+                <motion.span
+                  layoutId="nav-indicator"
+                  className="absolute bottom-1 w-6 h-[2px] bg-spill-red rounded-full"
+                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                />
               )}
             </Link>
           );

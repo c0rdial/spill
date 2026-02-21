@@ -19,12 +19,13 @@ export function PromptCard({ text, onReady }: Props) {
       <h2 className="font-display text-2xl text-spill-text text-center leading-snug mb-10">
         {text}
       </h2>
-      <button
+      <motion.button
         onClick={onReady}
+        whileTap={{ scale: 0.97 }}
         className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
       >
         Answer this
-      </button>
+      </motion.button>
     </motion.div>
   );
 }

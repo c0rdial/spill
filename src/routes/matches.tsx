@@ -1,4 +1,5 @@
 import { createRoute } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import { protectedLayout } from "./_protected";
 import { useAuth } from "../hooks/useAuth";
 import { useUser } from "../hooks/useUser";
@@ -25,7 +26,16 @@ function MatchesPage() {
         {isLoading ? (
           <p className="text-spill-muted">Loading...</p>
         ) : matches && matches.length > 0 ? (
-          matches.map((m) => <MatchCard key={m.id} match={m} />)
+          matches.map((m, i) => (
+            <motion.div
+              key={m.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: Math.min(i * 0.06, 0.5), ease: [0.16, 1, 0.3, 1] }}
+            >
+              <MatchCard match={m} />
+            </motion.div>
+          ))
         ) : (
           <div className="flex flex-col items-center text-center py-20">
             <div className="w-14 h-14 rounded-full bg-spill-card border border-spill-border flex items-center justify-center mb-4">

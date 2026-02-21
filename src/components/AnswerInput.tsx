@@ -28,13 +28,14 @@ export function AnswerInput({ onSubmit, loading }: Props) {
         className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text placeholder-spill-muted resize-none focus:outline-none focus:border-spill-red text-lg"
       />
       <p className="text-spill-muted text-xs mt-2 self-end">{400 - text.length}</p>
-      <button
+      <motion.button
         onClick={() => onSubmit(text)}
         disabled={loading || !text.trim()}
+        whileTap={{ scale: 0.97 }}
         className="w-full mt-6 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
       >
         {loading ? "Submitting..." : "Spill it"}
-      </button>
+      </motion.button>
     </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 import { createRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { protectedLayout } from "./_protected";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -73,7 +74,12 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
       </div>
       <div className="px-6 space-y-6">
         {/* Identity */}
-        <section className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4">
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4"
+        >
           <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
             Identity
           </p>
@@ -106,10 +112,15 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
               className="w-full bg-spill-bg border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red"
             />
           </div>
-        </section>
+        </motion.section>
 
         {/* Preferences */}
-        <section className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4">
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4"
+        >
           <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
             Preferences
           </p>
@@ -125,11 +136,16 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
             </label>
             <ShowMeSelect value={showMe} onChange={setShowMe} />
           </div>
-        </section>
+        </motion.section>
 
         {/* Interests */}
         {tags.length > 0 && (
-          <section className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4">
+          <motion.section
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4"
+          >
             <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
               Interests
             </p>
@@ -138,29 +154,36 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
               selected={interests}
               onChange={setInterests}
             />
-          </section>
+          </motion.section>
         )}
 
-        <button
-          onClick={handleSave}
-          disabled={
-            saving ||
-            !name ||
-            !gender ||
-            showMe.length === 0 ||
-            interests.length < 3
-          }
-          className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
+          className="space-y-6"
         >
-          {saving ? "Saving..." : saved ? "Saved!" : "Save changes"}
-        </button>
+          <button
+            onClick={handleSave}
+            disabled={
+              saving ||
+              !name ||
+              !gender ||
+              showMe.length === 0 ||
+              interests.length < 3
+            }
+            className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+          >
+            {saving ? "Saving..." : saved ? "Saved!" : "Save changes"}
+          </button>
 
-        <button
-          onClick={handleSignOut}
-          className="w-full border border-spill-border text-spill-muted font-semibold py-3 rounded-lg"
-        >
-          Sign out
-        </button>
+          <button
+            onClick={handleSignOut}
+            className="w-full border border-spill-border text-spill-muted font-semibold py-3 rounded-lg"
+          >
+            Sign out
+          </button>
+        </motion.div>
       </div>
     </div>
   );

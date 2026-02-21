@@ -81,13 +81,14 @@ function LoginPage() {
                 placeholder="you@example.com"
                 className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 placeholder-spill-muted focus:outline-none focus:border-spill-red"
               />
-              <button
+              <motion.button
                 onClick={sendOtp}
                 disabled={loading || !email}
+                whileTap={{ scale: 0.97 }}
                 className="w-full mt-4 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
               >
                 {loading ? "Sending..." : "Send code"}
-              </button>
+              </motion.button>
             </motion.div>
           ) : (
             <motion.div
@@ -112,13 +113,14 @@ function LoginPage() {
                 maxLength={8}
                 className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 placeholder-spill-muted text-center text-2xl tracking-widest focus:outline-none focus:border-spill-red"
               />
-              <button
+              <motion.button
                 onClick={verifyOtp}
                 disabled={loading || otp.length < 6}
+                whileTap={{ scale: 0.97 }}
                 className="w-full mt-4 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
               >
                 {loading ? "Verifying..." : "Verify"}
-              </button>
+              </motion.button>
               <button
                 onClick={() => setStep("email")}
                 className="w-full mt-2 text-spill-muted text-sm py-2"
@@ -139,7 +141,7 @@ function LoginPage() {
           <div className="flex-1 h-px bg-spill-border" />
         </div>
 
-        <button
+        <motion.button
           onClick={() =>
             supabase.auth.signInWithOAuth({
               provider: "google",
@@ -148,6 +150,7 @@ function LoginPage() {
               },
             })
           }
+          whileTap={{ scale: 0.97 }}
           className="w-full flex items-center justify-center gap-3 border border-spill-border rounded-lg py-3 text-spill-text font-medium transition-colors hover:bg-spill-card"
         >
           <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
@@ -169,7 +172,7 @@ function LoginPage() {
             />
           </svg>
           Continue with Google
-        </button>
+        </motion.button>
 
         {import.meta.env.DEV && (
           <button

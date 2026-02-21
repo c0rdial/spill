@@ -14,20 +14,24 @@ export function DareButtons({ onDare, onPass, loading }: Props) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
     >
-      <button
+      <motion.button
         onClick={onPass}
         disabled={loading}
+        whileTap={{ scale: 0.97 }}
         className="flex-1 border border-spill-border text-spill-muted font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
       >
         Pass
-      </button>
-      <button
+      </motion.button>
+      <motion.button
         onClick={onDare}
         disabled={loading}
+        whileHover={{ scale: 1.03 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 400, damping: 17 }}
         className="flex-1 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
       >
         Dare
-      </button>
+      </motion.button>
     </motion.div>
   );
 }

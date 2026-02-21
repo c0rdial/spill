@@ -140,34 +140,7 @@ function SpillPage() {
   return (
     <div className="min-h-screen bg-spill-bg pb-20">
       <AnimatePresence>
-        {matchAlert && (
-          <motion.div
-            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <motion.div
-              className="text-center"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <p className="font-display italic text-4xl text-spill-text mb-2">
-                It's a match.
-              </p>
-              <p className="text-spill-muted mb-6">Go say something real.</p>
-              <button
-                onClick={() => setMatchAlert(false)}
-                className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
-              >
-                Keep going
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
+        {matchAlert && <MatchCeremony onDismiss={() => setMatchAlert(false)} />}
       </AnimatePresence>
 
       {phase === "prompt" && (
@@ -220,5 +193,69 @@ function SpillPage() {
         </div>
       )}
     </div>
+  );
+}
+
+const PARTICLES = Array.from({ length: 10 }, (_, i) => {
+  const angle = (i / 10) * Math.PI * 2;
+  // Deterministic variation per particle using golden ratio offset
+  const jitter = ((i * 1.618) % 1);
+  const dist = 80 + jitter * 60;
+  return {
+    x: Math.cos(angle) * dist,
+    y: Math.sin(angle) * dist,
+    size: 4 + jitter * 4,
+  };
+});
+
+function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="relative text-center">
+        {PARTICLES.map((p, i) => (
+          <motion.div
+            key={i}
+            className="absolute left-1/2 top-1/2 rounded-full bg-spill-red"
+            style={{ width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2 }}
+            initial={{ scale: 0, opacity: 1, x: 0, y: 0 }}
+            animate={{ scale: 1, opacity: 0, x: p.x, y: p.y }}
+            transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
+          />
+        ))}
+        <motion.p
+          className="font-display italic text-4xl text-spill-text mb-2"
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+        >
+          It's a match.
+        </motion.p>
+        <motion.p
+          className="text-spill-muted mb-6"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        >
+          Go say something real.
+        </motion.p>
+        <motion.button
+          onClick={onDismiss}
+          whileTap={{ scale: 0.97 }}
+          className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+        >
+          Keep going
+        </motion.button>
+      </div>
+    </motion.div>
   );
 }

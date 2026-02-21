@@ -45,19 +45,34 @@ export function RevealCard({ answerText, onFlipped }: Props) {
             </p>
           </div>
           {/* Back */}
-          <div
+          <motion.div
             className="absolute inset-0 rounded-2xl border border-spill-red flex items-center justify-center px-6"
             style={{
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
               background: "linear-gradient(135deg, #1A0808, #1A0A0A)",
-              boxShadow: "0 0 40px rgba(192,57,43,0.15)",
             }}
+            animate={
+              flipped
+                ? {
+                    boxShadow: [
+                      "0 0 40px rgba(192,57,43,0.15)",
+                      "0 0 40px rgba(192,57,43,0.35)",
+                      "0 0 40px rgba(192,57,43,0.15)",
+                    ],
+                  }
+                : { boxShadow: "0 0 40px rgba(192,57,43,0.15)" }
+            }
+            transition={
+              flipped
+                ? { boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" } }
+                : {}
+            }
           >
             <p className="text-spill-text text-xl text-center leading-relaxed">
               {answerText}
             </p>
-          </div>
+          </motion.div>
         </motion.div>
       </div>
     </div>
