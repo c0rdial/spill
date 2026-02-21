@@ -3,6 +3,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { rootRoute } from "./__root";
 import { supabase } from "../lib/supabase";
+import { DecoShapes } from "../components/DecoShapes";
+import type { Shape } from "../components/DecoShapes";
 
 export const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -11,6 +13,17 @@ export const loginRoute = createRoute({
 });
 
 const expoOut = [0.16, 1, 0.3, 1] as const;
+
+const LOGIN_SHAPES: Shape[] = [
+  { type: "heart", color: "#FF3B6F", x: 78, y: 6, size: 32, rotate: 15, delay: 0.1 },
+  { type: "star", color: "#D7FF81", x: 10, y: 10, size: 24, rotate: -20, delay: 0.2 },
+  { type: "triangle", color: "#FAFAFA", x: 85, y: 28, size: 18, rotate: 30, delay: 0.15 },
+  { type: "circle", color: "#BC96FF", x: 5, y: 32, size: 22, rotate: 0, delay: 0.25 },
+  { type: "blob", color: "#BC96FF", x: 90, y: 55, size: 26, rotate: -10, delay: 0.3 },
+  { type: "heart", color: "#D7FF81", x: 2, y: 65, size: 20, rotate: -25, delay: 0.35 },
+  { type: "star", color: "#FF3B6F", x: 88, y: 80, size: 18, rotate: 45, delay: 0.18 },
+  { type: "triangle", color: "#D7FF81", x: 8, y: 85, size: 16, rotate: -15, delay: 0.28 },
+];
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -49,9 +62,10 @@ function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
+    <div className="relative min-h-screen flex flex-col items-center justify-center px-6">
+      <DecoShapes shapes={LOGIN_SHAPES} />
       <motion.div
-        className="w-full"
+        className="relative z-10 w-full"
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: expoOut }}

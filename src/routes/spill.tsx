@@ -13,6 +13,8 @@ import { PromptCard } from "../components/PromptCard";
 import { AnswerInput } from "../components/AnswerInput";
 import { RevealCard } from "../components/RevealCard";
 import { DareButtons } from "../components/DareButtons";
+import { DecoShapes } from "../components/DecoShapes";
+import type { Shape } from "../components/DecoShapes";
 
 export const spillRoute = createRoute({
   getParentRoute: () => protectedLayout,
@@ -207,14 +209,9 @@ function SpillPage() {
         ))}
       {phase === "done" && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-          <motion.p
-            className="font-display italic text-3xl font-bold mb-2 bg-spill-red bg-clip-text text-transparent"
-            animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-            style={{ backgroundSize: "200% 200%" }}
-          >
+          <p className="font-display italic text-3xl font-bold mb-2 text-spill-green">
             You spilled it.
-          </motion.p>
+          </p>
           <p className="text-spill-muted text-center">
             Come back tomorrow — new prompt, new vibes.
           </p>
@@ -224,22 +221,20 @@ function SpillPage() {
   );
 }
 
-const PARTICLE_COLORS = ["#FF3B6F", "#D7FF81", "#BC96FF"];
-
-const PARTICLES = Array.from({ length: 10 }, (_, i) => {
-  const angle = (i / 10) * Math.PI * 2;
-  const jitter = ((i * 1.618) % 1);
-  const dist = 80 + jitter * 60;
-  return {
-    x: Math.cos(angle) * dist,
-    y: Math.sin(angle) * dist,
-    size: 4 + jitter * 4,
-    color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
-  };
-});
+const MATCH_SHAPES: Shape[] = [
+  { type: "heart", color: "#FF3B6F", x: 8, y: 8, size: 36, rotate: -15, delay: 0.05 },
+  { type: "heart", color: "#BC96FF", x: 75, y: 72, size: 44, rotate: 20, delay: 0.15 },
+  { type: "star", color: "#D7FF81", x: 82, y: 10, size: 28, rotate: 12, delay: 0.1 },
+  { type: "star", color: "#D7FF81", x: 20, y: 78, size: 20, rotate: -30, delay: 0.25 },
+  { type: "triangle", color: "#FAFAFA", x: 60, y: 5, size: 24, rotate: 25, delay: 0.08 },
+  { type: "triangle", color: "#FF3B6F", x: 5, y: 60, size: 20, rotate: -45, delay: 0.2 },
+  { type: "circle", color: "#D7FF81", x: 88, y: 45, size: 32, rotate: 0, delay: 0.12 },
+  { type: "circle", color: "#BC96FF", x: 15, y: 35, size: 18, rotate: 0, delay: 0.18 },
+  { type: "blob", color: "#BC96FF", x: 50, y: 82, size: 30, rotate: 40, delay: 0.22 },
+  { type: "heart", color: "#FF3B6F", x: 40, y: 3, size: 22, rotate: 10, delay: 0.14 },
+];
 
 function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
-
   return (
     <motion.div
       className="fixed inset-0 z-50 bg-spill-bg/95 backdrop-blur-md flex items-center justify-center"
@@ -248,24 +243,16 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="relative text-center">
-        {PARTICLES.map((p, i) => (
-          <motion.div
-            key={i}
-            className="absolute left-1/2 top-1/2 rounded-full"
-            style={{ width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2, backgroundColor: p.color }}
-            initial={{ scale: 0, opacity: 1, x: 0, y: 0 }}
-            animate={{ scale: 1, opacity: 0, x: p.x, y: p.y }}
-            transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-          />
-        ))}
+      <DecoShapes shapes={MATCH_SHAPES} />
+      <div className="relative text-center z-10">
         <motion.p
           className="font-display italic text-4xl text-spill-text mb-2"
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
         >
-          It's a match.
+          It's a{" "}
+          <span className="text-spill-green">match</span>.
         </motion.p>
         <motion.p
           className="text-spill-muted mb-6"
