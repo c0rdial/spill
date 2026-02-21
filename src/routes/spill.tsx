@@ -183,6 +183,15 @@ function SpillPage() {
               />
             )}
           </div>
+        ) : alreadyAnswered ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+            <p className="text-spill-text text-2xl font-bold mb-2">
+              You've spilled for today
+            </p>
+            <p className="text-spill-muted text-center">
+              Check back tomorrow for a new prompt.
+            </p>
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
             <p className="text-spill-text text-xl font-bold mb-2">

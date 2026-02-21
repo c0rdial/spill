@@ -14,13 +14,11 @@ export function useReveals(
   return useQuery({
     queryKey: ["reveals", userId, promptId],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_reveals_for_user", {
-        p_user_id: userId!,
-        p_prompt_id: promptId!,
-        p_limit: 5,
+      const { data, error } = await supabase.functions.invoke("reveals", {
+        body: { prompt_id: promptId },
       });
       if (error) throw error;
-      return (data ?? []) as RevealResult[];
+      return (data?.reveals ?? []) as RevealResult[];
     },
     enabled: !!userId && !!promptId,
   });

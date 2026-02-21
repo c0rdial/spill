@@ -61,7 +61,6 @@ Deno.serve(async (req) => {
     .select("id")
     .eq("viewer_id", reveal.answerer_id)
     .eq("answerer_id", reveal.viewer_id)
-    .eq("prompt_id", reveal.prompt_id)
     .eq("action", "dare")
     .maybeSingle();
 
