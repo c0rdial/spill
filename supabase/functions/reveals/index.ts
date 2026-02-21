@@ -1,19 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+function json(body: unknown, status = 200) {
+  return Response.json(body, { status, headers: corsHeaders });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader)
-    return Response.json({ error: "Missing auth" }, { status: 401 });
+    return json({ error: "Missing auth" }, 401);
 
   const token = authHeader.replace("Bearer ", "");
   const admin = createClient(
@@ -25,11 +29,11 @@ Deno.serve(async (req) => {
     data: { user },
   } = await admin.auth.getUser(token);
   if (!user)
-    return Response.json({ error: "Invalid token" }, { status: 401 });
+    return json({ error: "Invalid token" }, 401);
 
   const { prompt_id } = await req.json();
   if (!prompt_id)
-    return Response.json({ error: "Missing prompt_id" }, { status: 400 });
+    return json({ error: "Missing prompt_id" }, 400);
 
   const { data: caller, error: callerErr } = await admin
     .from("users")
@@ -37,7 +41,7 @@ Deno.serve(async (req) => {
     .eq("id", user.id)
     .single();
   if (callerErr || !caller)
-    return Response.json({ error: "User profile not found" }, { status: 404 });
+    return json({ error: "User profile not found" }, 404);
 
   // Find answers for this prompt (not by caller)
   const { data: candidates } = await admin
@@ -124,10 +128,10 @@ Deno.serve(async (req) => {
     .eq("action", "pending");
 
   if (fetchErr)
-    return Response.json({ error: fetchErr.message }, { status: 500 });
+    return json({ error: fetchErr.message }, 500);
 
   if (!pending || pending.length === 0)
-    return Response.json({ reveals: [] });
+    return json({ reveals: [] });
 
   // Get answer text for each reveal
   const { data: answers } = await admin
@@ -146,5 +150,5 @@ Deno.serve(async (req) => {
     out_answerer_id: r.answerer_id,
   }));
 
-  return Response.json({ reveals });
+  return json({ reveals });
 });

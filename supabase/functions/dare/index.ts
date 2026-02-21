@@ -1,24 +1,27 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+function json(body: unknown, status = 200) {
+  return Response.json(body, { status, headers: corsHeaders });
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers":
-          "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader)
-    return Response.json({ error: "Missing auth" }, { status: 401 });
+    return json({ error: "Missing auth" }, 401);
 
   const token = authHeader.replace("Bearer ", "");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const admin = createClient(
-    supabaseUrl,
+    Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
@@ -26,11 +29,11 @@ Deno.serve(async (req) => {
     data: { user },
   } = await admin.auth.getUser(token);
   if (!user)
-    return Response.json({ error: "Invalid token" }, { status: 401 });
+    return json({ error: "Invalid token" }, 401);
 
   const { reveal_id, action } = await req.json();
   if (!reveal_id || !["dare", "pass"].includes(action))
-    return Response.json({ error: "Invalid params", matched: false });
+    return json({ error: "Invalid params", matched: false });
 
   // Fetch reveal & verify ownership
   const { data: reveal, error: fetchErr } = await admin
@@ -39,11 +42,11 @@ Deno.serve(async (req) => {
     .eq("id", reveal_id)
     .single();
   if (fetchErr || !reveal)
-    return Response.json({ error: "Reveal not found", matched: false });
+    return json({ error: "Reveal not found", matched: false });
   if (reveal.viewer_id !== user.id)
-    return Response.json({ error: "Not your reveal", matched: false });
+    return json({ error: "Not your reveal", matched: false });
   if (reveal.action !== "pending")
-    return Response.json({ error: "Already acted", matched: false });
+    return json({ error: "Already acted", matched: false });
 
   // Update reveal
   const { error: updateErr } = await admin
@@ -51,9 +54,9 @@ Deno.serve(async (req) => {
     .update({ action, acted_at: new Date().toISOString() })
     .eq("id", reveal_id);
   if (updateErr)
-    return Response.json({ error: updateErr.message, matched: false });
+    return json({ error: updateErr.message, matched: false });
 
-  if (action === "pass") return Response.json({ matched: false });
+  if (action === "pass") return json({ matched: false });
 
   // Check mutual dare
   const { data: reverse } = await admin
@@ -64,7 +67,7 @@ Deno.serve(async (req) => {
     .eq("action", "dare")
     .maybeSingle();
 
-  if (!reverse) return Response.json({ matched: false });
+  if (!reverse) return json({ matched: false });
 
   // Insert match with canonical ordering
   const user_a_id =
@@ -80,7 +83,7 @@ Deno.serve(async (req) => {
     .from("matches")
     .insert({ user_a_id, user_b_id, prompt_id: reveal.prompt_id });
   if (matchErr && !matchErr.message.includes("duplicate"))
-    return Response.json({ error: matchErr.message, matched: false });
+    return json({ error: matchErr.message, matched: false });
 
-  return Response.json({ matched: true });
+  return json({ matched: true });
 });
