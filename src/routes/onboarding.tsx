@@ -1,5 +1,6 @@
 import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { rootRoute } from "./__root";
 import { supabase } from "../lib/supabase";
 import { PhotoUpload } from "../components/PhotoUpload";
@@ -28,6 +29,7 @@ function OnboardingPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: tags } = useInterestTags();
 
   async function handleSubmit() {
@@ -37,15 +39,15 @@ function OnboardingPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user?.phone) {
+    if (!user?.email) {
       setError("No authenticated user found");
       setLoading(false);
       return;
     }
 
-    const { error: insertError } = await supabase.from("users").insert({
+    const { error: insertError } = await supabase.from("users").upsert({
       id: user.id,
-      phone: user.phone,
+      email: user.email,
       name,
       age: parseInt(age),
       gender,
@@ -58,6 +60,7 @@ function OnboardingPage() {
     if (insertError) {
       setError(insertError.message);
     } else {
+      await queryClient.refetchQueries({ queryKey: ["user", user.id] });
       navigate({ to: "/spill" });
     }
     setLoading(false);

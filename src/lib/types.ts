@@ -2,7 +2,7 @@ export type Gender = "man" | "woman" | "nonbinary";
 
 export type User = {
   id: string;
-  phone: string;
+  email: string;
   name: string;
   age: number;
   gender: Gender;

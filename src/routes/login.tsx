@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { rootRoute } from "./__root";
 import { supabase } from "../lib/supabase";
@@ -10,16 +10,17 @@ export const loginRoute = createRoute({
 });
 
 function LoginPage() {
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"email" | "otp">("email");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   async function sendOtp() {
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signInWithOtp({ phone });
+    const { error } = await supabase.auth.signInWithOtp({ email });
     if (error) {
       setError(error.message);
     } else {
@@ -32,14 +33,14 @@ function LoginPage() {
     setLoading(true);
     setError("");
     const { error } = await supabase.auth.verifyOtp({
-      phone,
+      email,
       token: otp,
-      type: "sms",
+      type: "email",
     });
     if (error) {
       setError(error.message);
     } else {
-      window.location.href = "/";
+      navigate({ to: "/spill" });
     }
     setLoading(false);
   }
@@ -50,21 +51,20 @@ function LoginPage() {
         <h1 className="text-5xl font-bold mb-2">spill</h1>
         <p className="text-spill-muted mb-10">Say something real.</p>
 
-        {step === "phone" ? (
+        {step === "email" ? (
           <>
-            <label className="block text-sm font-medium mb-2">
-              Phone number
-            </label>
+            <label className="block text-sm font-medium mb-2">Email</label>
             <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+60 12 345 6789"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && email && sendOtp()}
+              placeholder="you@example.com"
               className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 placeholder-spill-muted focus:outline-none focus:border-spill-red"
             />
             <button
               onClick={sendOtp}
-              disabled={loading || !phone}
+              disabled={loading || !email}
               className="w-full mt-4 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
             >
               {loading ? "Sending..." : "Send code"}
@@ -73,13 +73,14 @@ function LoginPage() {
         ) : (
           <>
             <label className="block text-sm font-medium mb-2">
-              Enter the code sent to {phone}
+              Enter the code sent to {email}
             </label>
             <input
               type="text"
               inputMode="numeric"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && otp.length >= 6 && verifyOtp()}
               placeholder="000000"
               maxLength={6}
               className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 placeholder-spill-muted text-center text-2xl tracking-widest focus:outline-none focus:border-spill-red"
@@ -92,16 +93,39 @@ function LoginPage() {
               {loading ? "Verifying..." : "Verify"}
             </button>
             <button
-              onClick={() => setStep("phone")}
+              onClick={() => setStep("email")}
               className="w-full mt-2 text-spill-muted text-sm py-2"
             >
-              Use a different number
+              Use a different email
             </button>
           </>
         )}
 
         {error && (
           <p className="mt-4 text-red-400 text-sm text-center">{error}</p>
+        )}
+
+        {import.meta.env.DEV && (
+          <button
+            onClick={async () => {
+              setLoading(true);
+              setError("");
+              const { error } = await supabase.auth.signInWithPassword({
+                email: "dev@spill.test",
+                password: "devdev123",
+              });
+              if (error) {
+                setError(error.message);
+              } else {
+                navigate({ to: "/spill" });
+              }
+              setLoading(false);
+            }}
+            disabled={loading}
+            className="w-full mt-8 border border-spill-border text-spill-muted text-sm py-2 rounded-lg disabled:opacity-50"
+          >
+            Dev login
+          </button>
         )}
       </div>
     </div>

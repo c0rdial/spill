@@ -2,9 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 
 export type RevealResult = {
-  reveal_id: string;
-  answer_text: string;
-  answerer_id: string;
+  out_reveal_id: string;
+  out_answer_text: string;
+  out_answerer_id: string;
 };
 
 export function useReveals(

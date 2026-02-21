@@ -1,5 +1,6 @@
 import { createRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { protectedLayout } from "./_protected";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -24,6 +25,22 @@ function SpillPage() {
   const { session } = useAuth();
   const { data: user } = useUser(session?.user?.id);
   const { data: prompt, isLoading: promptLoading } = useTodayPrompt();
+
+  const { data: existingAnswer, isLoading: answerLoading } = useQuery({
+    queryKey: ["myAnswer", user?.id, prompt?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("answers")
+        .select("id")
+        .eq("user_id", user!.id)
+        .eq("prompt_id", prompt!.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user && !!prompt,
+  });
+
+  const alreadyAnswered = !!existingAnswer;
   const [phase, setPhase] = useState<Phase>("prompt");
   const [loading, setLoading] = useState(false);
   const [answered, setAnswered] = useState(false);
@@ -31,13 +48,20 @@ function SpillPage() {
   const [flipped, setFlipped] = useState(false);
   const [matchAlert, setMatchAlert] = useState(false);
 
+  useEffect(() => {
+    if (alreadyAnswered && phase === "prompt") {
+      setAnswered(true);
+      setPhase("reveals");
+    }
+  }, [alreadyAnswered, phase]);
+
   const {
     data: reveals,
     isLoading: revealsLoading,
     refetch: fetchReveals,
   } = useReveals(
-    answered ? user?.id : undefined,
-    answered ? prompt?.id : undefined,
+    answered || alreadyAnswered ? user?.id : undefined,
+    answered || alreadyAnswered ? prompt?.id : undefined,
   );
 
   useEffect(() => {
@@ -91,7 +115,7 @@ function SpillPage() {
     await supabase
       .from("reveals")
       .update({ action, acted_at: new Date().toISOString() })
-      .eq("id", currentReveal.reveal_id);
+      .eq("id", currentReveal.out_reveal_id);
 
     const nextIndex = currentIndex + 1;
     if (nextIndex < (reveals?.length ?? 0)) {
@@ -103,7 +127,7 @@ function SpillPage() {
     setLoading(false);
   }
 
-  if (promptLoading) {
+  if (promptLoading || answerLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <p className="text-spill-muted">Loading today's spill...</p>
@@ -155,8 +179,8 @@ function SpillPage() {
               {currentIndex + 1} of {reveals.length}
             </p>
             <RevealCard
-              key={currentReveal.reveal_id}
-              answerText={currentReveal.answer_text}
+              key={currentReveal.out_reveal_id}
+              answerText={currentReveal.out_answer_text}
               onFlipped={() => setFlipped(true)}
             />
             {flipped && (

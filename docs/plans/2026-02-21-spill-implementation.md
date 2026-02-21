@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build a prompt-based dating app where users answer daily prompts, see one anonymous answer, and can "dare" to match.
+**Goal:** Build a prompt-based dating app where users answer daily prompts, see up to 5 anonymous answers (weighted by shared interests), and can "dare" to match.
 
 **Architecture:** Flat route structure with AuthGuard. Code-based TanStack Router (already set up). React Query for server state, Supabase for auth/db/realtime/storage. Framer Motion for card flip animation.
 
@@ -16,17 +16,31 @@
 
 **Step 1: Run the schema SQL**
 
-Execute this SQL in the Supabase SQL Editor (dashboard → SQL Editor → New query):
+Execute the full schema from PRD section 8a in the Supabase SQL Editor. This creates 7 tables:
 
 ```sql
--- Users
+-- Users (with gender, show_me, interests)
 create table users (
   id uuid primary key default gen_random_uuid(),
   phone text unique not null,
   name text not null,
-  age integer not null,
+  age integer not null check (age >= 18 and age <= 99),
+  gender text not null check (gender in ('man', 'woman', 'nonbinary')),
+  show_me text[] not null check (show_me <@ array['man', 'woman', 'nonbinary']::text[]),
+  interests text[] default '{}',
   bio text check (char_length(bio) <= 140),
   photo_url text,
+  created_at timestamptz default now()
+);
+
+create index idx_users_interests on users using gin (interests);
+create index idx_users_show_me on users using gin (show_me);
+
+-- Interest tags (reference table for onboarding UI)
+create table interest_tags (
+  id uuid primary key default gen_random_uuid(),
+  label text unique not null,
+  category text not null,
   created_at timestamptz default now()
 );
 
@@ -38,24 +52,27 @@ create table prompts (
   created_at timestamptz default now()
 );
 
--- Answers
+-- Answers (400 char limit)
 create table answers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id) on delete cascade,
   prompt_id uuid references prompts(id) on delete cascade,
-  text text check (char_length(text) <= 280),
+  text text check (char_length(text) <= 400),
   created_at timestamptz default now(),
   unique(user_id, prompt_id)
 );
 
--- Dares
-create table dares (
+-- Reveals (replaces dares table)
+create table reveals (
   id uuid primary key default gen_random_uuid(),
-  sender_id uuid references users(id) on delete cascade,
-  receiver_id uuid references users(id) on delete cascade,
-  prompt_id uuid references prompts(id),
+  viewer_id uuid references users(id) on delete cascade,
+  answerer_id uuid references users(id) on delete cascade,
+  prompt_id uuid references prompts(id) on delete cascade,
+  action text not null default 'pending'
+    check (action in ('pending', 'dare', 'pass')),
   created_at timestamptz default now(),
-  unique(sender_id, receiver_id, prompt_id)
+  acted_at timestamptz,
+  unique(viewer_id, answerer_id, prompt_id)
 );
 
 -- Matches
@@ -64,7 +81,8 @@ create table matches (
   user_a_id uuid references users(id) on delete cascade,
   user_b_id uuid references users(id) on delete cascade,
   prompt_id uuid references prompts(id),
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  unique(user_a_id, user_b_id, prompt_id)
 );
 
 -- Messages
@@ -75,44 +93,143 @@ create table messages (
   text text not null,
   created_at timestamptz default now()
 );
+```
 
--- Mutual dare trigger
+**Step 2: Run the match trigger from PRD section 8c**
+
+```sql
 create or replace function check_mutual_dare()
 returns trigger as $$
 begin
+  if NEW.action != 'dare' then
+    return NEW;
+  end if;
+
   if exists (
-    select 1 from dares
-    where sender_id = NEW.receiver_id
-    and receiver_id = NEW.sender_id
+    select 1 from reveals
+    where viewer_id = NEW.answerer_id
+    and answerer_id = NEW.viewer_id
     and prompt_id = NEW.prompt_id
+    and action = 'dare'
   ) then
     insert into matches (user_a_id, user_b_id, prompt_id)
-    values (NEW.sender_id, NEW.receiver_id, NEW.prompt_id);
+    values (
+      least(NEW.viewer_id, NEW.answerer_id),
+      greatest(NEW.viewer_id, NEW.answerer_id),
+      NEW.prompt_id
+    )
+    on conflict do nothing;
   end if;
+
   return NEW;
 end;
 $$ language plpgsql;
 
-create trigger on_dare_insert
-after insert on dares
+create trigger on_dare
+after insert or update on reveals
 for each row execute function check_mutual_dare();
-
--- Seed a prompt for today
-insert into prompts (text, active_date)
-values ('What''s a truth about you that would surprise most people?', current_date);
 ```
 
-**Step 2: Enable Realtime on messages table**
+**Step 3: Run the pairing RPC from PRD section 8d**
 
-In Supabase dashboard → Database → Replication, enable realtime for the `messages` table.
+```sql
+create or replace function get_reveals_for_user(
+  p_user_id uuid,
+  p_prompt_id uuid,
+  p_limit int default 5
+)
+returns table (
+  reveal_id uuid,
+  answer_text text,
+  answerer_id uuid
+)
+language plpgsql
+security definer
+as $$
+declare
+  v_user record;
+  v_user_interests text[];
+begin
+  select gender, show_me into v_user
+  from users where id = p_user_id;
 
-**Step 3: Create storage bucket**
+  select interests into v_user_interests
+  from users where id = p_user_id;
+
+  return query
+  with eligible_answers as (
+    select
+      a.id as answer_id,
+      a.text as answer_text,
+      a.user_id as answerer_id,
+      coalesce(
+        array_length(
+          array(
+            select unnest(u.interests)
+            intersect
+            select unnest(v_user_interests)
+          ), 1
+        ), 0
+      ) as interest_overlap
+    from answers a
+    join users u on u.id = a.user_id
+    where a.prompt_id = p_prompt_id
+      and a.user_id != p_user_id
+      -- Bidirectional gender preference match
+      and v_user.gender = any(u.show_me)
+      and u.gender = any(v_user.show_me)
+      -- Not already revealed (any prompt, ever)
+      and not exists (
+        select 1 from reveals r
+        where r.viewer_id = p_user_id
+        and r.answerer_id = a.user_id
+      )
+      -- Not already matched
+      and not exists (
+        select 1 from matches m
+        where (m.user_a_id = p_user_id and m.user_b_id = a.user_id)
+           or (m.user_a_id = a.user_id and m.user_b_id = p_user_id)
+      )
+    -- Weighted random: interest overlap gives a boost, not a hard filter
+    order by (interest_overlap * 0.5 + random()) desc
+    limit p_limit
+  ),
+  inserted_reveals as (
+    insert into reveals (viewer_id, answerer_id, prompt_id, action)
+    select p_user_id, ea.answerer_id, p_prompt_id, 'pending'
+    from eligible_answers ea
+    on conflict do nothing
+    returning id as reveal_id, answerer_id
+  )
+  select
+    ir.reveal_id,
+    ea.answer_text,
+    ir.answerer_id
+  from inserted_reveals ir
+  join eligible_answers ea on ea.answerer_id = ir.answerer_id;
+end;
+$$;
+```
+
+**Step 4: Run RLS policies from PRD section 9**
+
+All 7 tables get RLS enabled. Key policy: answers are only directly readable by their author. Other users' answers are surfaced exclusively through `get_reveals_for_user` (security definer).
+
+**Step 5: Run seed data from PRD section 8b**
+
+Insert 29 interest tags (music, events, lifestyle categories) and 30 prompts with `active_date` starting 2026-03-01.
+
+**Step 6: Enable Realtime on `messages` and `matches` tables**
+
+In Supabase dashboard → Database → Replication, enable realtime for both tables.
+
+**Step 7: Create storage bucket**
 
 In Supabase dashboard → Storage, create a public bucket called `avatars`.
 
-**Step 4: Enable Phone Auth**
+**Step 8: Enable Phone Auth**
 
-In Supabase dashboard → Authentication → Providers, enable Phone provider (use Twilio or test mode for development).
+In Supabase dashboard → Authentication → Providers, enable Phone provider.
 
 ---
 
@@ -130,8 +247,18 @@ export type User = {
   phone: string;
   name: string;
   age: number;
+  gender: 'man' | 'woman' | 'nonbinary';
+  show_me: ('man' | 'woman' | 'nonbinary')[];
+  interests: string[];
   bio: string | null;
   photo_url: string | null;
+  created_at: string;
+};
+
+export type InterestTag = {
+  id: string;
+  label: string;
+  category: string;
   created_at: string;
 };
 
@@ -150,12 +277,14 @@ export type Answer = {
   created_at: string;
 };
 
-export type Dare = {
+export type Reveal = {
   id: string;
-  sender_id: string;
-  receiver_id: string;
+  viewer_id: string;
+  answerer_id: string;
   prompt_id: string;
+  action: 'pending' | 'dare' | 'pass';
   created_at: string;
+  acted_at: string | null;
 };
 
 export type Match = {
@@ -280,6 +409,8 @@ git commit -m "feat: add useAuth hook for session management"
 
 **Step 1: Create useUser hook**
 
+Queries user by `id` (not phone):
+
 ```typescript
 // src/hooks/useUser.ts
 import { useQuery } from "@tanstack/react-query";
@@ -293,7 +424,7 @@ export function useUser(authUserId: string | undefined) {
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("phone", (await supabase.auth.getUser()).data.user?.phone ?? "")
+        .eq("id", authUserId!)
         .maybeSingle();
       if (error) throw error;
       return data as User | null;
@@ -485,7 +616,7 @@ function LoginPage() {
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 555 000 0000"
+              placeholder="+60 12 345 6789"
               className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text placeholder-spill-muted focus:outline-none focus:border-spill-red"
             />
             <button
@@ -549,11 +680,15 @@ git commit -m "feat: add login route with phone OTP auth"
 
 ---
 
-### Task 8: Onboarding route
+### Task 8: Onboarding route (multi-step)
 
 **Files:**
 - Create: `src/routes/onboarding.tsx`
 - Create: `src/components/PhotoUpload.tsx`
+- Create: `src/components/GenderSelect.tsx`
+- Create: `src/components/ShowMeSelect.tsx`
+- Create: `src/components/InterestPicker.tsx`
+- Create: `src/hooks/useInterestTags.ts`
 
 **Step 1: Create PhotoUpload component**
 
@@ -613,7 +748,177 @@ export function PhotoUpload({ onUploaded, currentUrl }: Props) {
 }
 ```
 
-**Step 2: Create onboarding route**
+**Step 2: Create GenderSelect component**
+
+Single-select pill group for gender identity.
+
+```tsx
+// src/components/GenderSelect.tsx
+const options = ['man', 'woman', 'nonbinary'] as const;
+const labels: Record<typeof options[number], string> = {
+  man: 'Man',
+  woman: 'Woman',
+  nonbinary: 'Nonbinary',
+};
+
+type Props = {
+  value: string | null;
+  onChange: (value: string) => void;
+};
+
+export function GenderSelect({ value, onChange }: Props) {
+  return (
+    <div className="flex gap-3">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => onChange(opt)}
+          className={`flex-1 py-3 rounded-lg text-sm font-semibold transition-colors ${
+            value === opt
+              ? 'bg-spill-red text-white'
+              : 'bg-spill-card border border-spill-border text-spill-muted'
+          }`}
+        >
+          {labels[opt]}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+**Step 3: Create ShowMeSelect component**
+
+Multi-select pill group for preferences.
+
+```tsx
+// src/components/ShowMeSelect.tsx
+const options = ['man', 'woman', 'nonbinary'] as const;
+const labels: Record<typeof options[number], string> = {
+  man: 'Men',
+  woman: 'Women',
+  nonbinary: 'Nonbinary',
+};
+
+type Props = {
+  value: string[];
+  onChange: (value: string[]) => void;
+};
+
+export function ShowMeSelect({ value, onChange }: Props) {
+  function toggle(opt: string) {
+    if (value.includes(opt)) {
+      onChange(value.filter((v) => v !== opt));
+    } else {
+      onChange([...value, opt]);
+    }
+  }
+
+  return (
+    <div className="flex gap-3">
+      {options.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => toggle(opt)}
+          className={`flex-1 py-3 rounded-lg text-sm font-semibold transition-colors ${
+            value.includes(opt)
+              ? 'bg-spill-red text-white'
+              : 'bg-spill-card border border-spill-border text-spill-muted'
+          }`}
+        >
+          {labels[opt]}
+        </button>
+      ))}
+    </div>
+  );
+}
+```
+
+**Step 4: Create useInterestTags hook**
+
+```typescript
+// src/hooks/useInterestTags.ts
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "../lib/supabase";
+import type { InterestTag } from "../lib/types";
+
+export function useInterestTags() {
+  return useQuery({
+    queryKey: ["interestTags"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("interest_tags")
+        .select("*")
+        .order("category")
+        .order("label");
+      if (error) throw error;
+      return data as InterestTag[];
+    },
+  });
+}
+```
+
+**Step 5: Create InterestPicker component**
+
+Multi-select pills grouped by category. Minimum 3 required.
+
+```tsx
+// src/components/InterestPicker.tsx
+import type { InterestTag } from "../lib/types";
+
+type Props = {
+  tags: InterestTag[];
+  selected: string[];
+  onChange: (selected: string[]) => void;
+};
+
+export function InterestPicker({ tags, selected, onChange }: Props) {
+  function toggle(label: string) {
+    if (selected.includes(label)) {
+      onChange(selected.filter((s) => s !== label));
+    } else {
+      onChange([...selected, label]);
+    }
+  }
+
+  const grouped = tags.reduce<Record<string, InterestTag[]>>((acc, tag) => {
+    (acc[tag.category] ??= []).push(tag);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-6">
+      {Object.entries(grouped).map(([category, categoryTags]) => (
+        <div key={category}>
+          <p className="text-spill-muted text-xs font-medium uppercase tracking-wider mb-3">
+            {category}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {categoryTags.map((tag) => (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggle(tag.label)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  selected.includes(tag.label)
+                    ? 'bg-spill-red text-white'
+                    : 'bg-spill-card border border-spill-border text-spill-muted'
+                }`}
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Step 6: Create onboarding route (4-step)**
 
 ```tsx
 // src/routes/onboarding.tsx
@@ -622,6 +927,10 @@ import { useState } from "react";
 import { rootRoute } from "./__root";
 import { supabase } from "../lib/supabase";
 import { PhotoUpload } from "../components/PhotoUpload";
+import { GenderSelect } from "../components/GenderSelect";
+import { ShowMeSelect } from "../components/ShowMeSelect";
+import { InterestPicker } from "../components/InterestPicker";
+import { useInterestTags } from "../hooks/useInterestTags";
 
 export const onboardingRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -629,17 +938,23 @@ export const onboardingRoute = createRoute({
   component: OnboardingPage,
 });
 
+type Step = "basic" | "preferences" | "profile" | "interests";
+
 function OnboardingPage() {
+  const [step, setStep] = useState<Step>("basic");
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
+  const [gender, setGender] = useState<string | null>(null);
+  const [showMe, setShowMe] = useState<string[]>([]);
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [interests, setInterests] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { data: tags } = useInterestTags();
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setLoading(true);
     setError("");
 
@@ -651,9 +966,13 @@ function OnboardingPage() {
     }
 
     const { error: insertError } = await supabase.from("users").insert({
+      id: user.id,
       phone: user.phone,
       name,
       age: parseInt(age),
+      gender,
+      show_me: showMe,
+      interests,
       bio: bio || null,
       photo_url: photoUrl,
     });
@@ -668,89 +987,120 @@ function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-spill-bg flex flex-col items-center justify-center px-6">
-      <form onSubmit={handleSubmit} className="w-full max-w-[430px] space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-spill-text">Set up your profile</h1>
-          <p className="text-spill-muted mt-1">This stays hidden until you match.</p>
-        </div>
+      <div className="w-full max-w-[430px] space-y-6">
+        {/* Step: Basic */}
+        {step === "basic" && (
+          <>
+            <div>
+              <h1 className="text-3xl font-bold text-spill-text">Let's start</h1>
+              <p className="text-spill-muted mt-1">The basics.</p>
+            </div>
+            <div>
+              <label className="block text-spill-text text-sm font-medium mb-2">Name</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
+                className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red" />
+            </div>
+            <div>
+              <label className="block text-spill-text text-sm font-medium mb-2">Age</label>
+              <input type="number" value={age} onChange={(e) => setAge(e.target.value)} required min={18} max={99}
+                className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red" />
+            </div>
+            <button onClick={() => setStep("preferences")} disabled={!name || !age}
+              className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity">
+              Next
+            </button>
+          </>
+        )}
 
-        <div className="flex justify-center">
-          <PhotoUpload onUploaded={setPhotoUrl} currentUrl={photoUrl} />
-        </div>
+        {/* Step: Preferences */}
+        {step === "preferences" && (
+          <>
+            <div>
+              <h1 className="text-3xl font-bold text-spill-text">Preferences</h1>
+              <p className="text-spill-muted mt-1">Who are you, who do you want to meet?</p>
+            </div>
+            <div>
+              <label className="block text-spill-text text-sm font-medium mb-2">I am a</label>
+              <GenderSelect value={gender} onChange={setGender} />
+            </div>
+            <div>
+              <label className="block text-spill-text text-sm font-medium mb-2">Show me</label>
+              <ShowMeSelect value={showMe} onChange={setShowMe} />
+            </div>
+            <button onClick={() => setStep("profile")} disabled={!gender || showMe.length === 0}
+              className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity">
+              Next
+            </button>
+          </>
+        )}
 
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red"
-          />
-        </div>
+        {/* Step: Profile */}
+        {step === "profile" && (
+          <>
+            <div>
+              <h1 className="text-3xl font-bold text-spill-text">Your profile</h1>
+              <p className="text-spill-muted mt-1">This stays hidden until you match.</p>
+            </div>
+            <div className="flex justify-center">
+              <PhotoUpload onUploaded={setPhotoUrl} currentUrl={photoUrl} />
+            </div>
+            <div>
+              <label className="block text-spill-text text-sm font-medium mb-2">
+                Bio <span className="text-spill-muted">({140 - bio.length} left)</span>
+              </label>
+              <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={140} rows={3}
+                className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red" />
+            </div>
+            <button onClick={() => setStep("interests")}
+              className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg transition-opacity">
+              Next
+            </button>
+          </>
+        )}
 
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">Age</label>
-          <input
-            type="number"
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            required
-            min={18}
-            max={99}
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red"
-          />
-        </div>
-
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">
-            Bio <span className="text-spill-muted">({140 - bio.length} left)</span>
-          </label>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            maxLength={140}
-            rows={3}
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading || !name || !age}
-          className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
-        >
-          {loading ? "Saving..." : "Start spilling"}
-        </button>
+        {/* Step: Interests */}
+        {step === "interests" && (
+          <>
+            <div>
+              <h1 className="text-3xl font-bold text-spill-text">Interests</h1>
+              <p className="text-spill-muted mt-1">Pick at least 3.</p>
+            </div>
+            {tags && <InterestPicker tags={tags} selected={interests} onChange={setInterests} />}
+            <button onClick={handleSubmit} disabled={loading || interests.length < 3}
+              className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity">
+              {loading ? "Saving..." : "Start spilling"}
+            </button>
+          </>
+        )}
 
         {error && (
           <p className="text-red-400 text-sm text-center">{error}</p>
         )}
-      </form>
+      </div>
     </div>
   );
 }
 ```
 
-**Step 3: Verify**
+**Step 7: Verify**
 
 Run: `npm run build`
 Expected: PASS
 
-**Step 4: Commit**
+**Step 8: Commit**
 
 ```bash
-git add src/components/PhotoUpload.tsx src/routes/onboarding.tsx
-git commit -m "feat: add onboarding route with profile creation and photo upload"
+git add src/components/PhotoUpload.tsx src/components/GenderSelect.tsx src/components/ShowMeSelect.tsx src/components/InterestPicker.tsx src/hooks/useInterestTags.ts src/routes/onboarding.tsx
+git commit -m "feat: add multi-step onboarding with gender, preferences, and interest picker"
 ```
 
 ---
 
-### Task 9: Today's Spill route (core loop + card flip)
+### Task 9: Today's Spill route (multi-reveal carousel)
 
 **Files:**
 - Create: `src/hooks/useTodayPrompt.ts`
-- Create: `src/hooks/useRandomAnswer.ts`
+- Create: `src/hooks/useReveals.ts`
 - Create: `src/components/PromptCard.tsx`
 - Create: `src/components/AnswerInput.tsx`
 - Create: `src/components/RevealCard.tsx`
@@ -758,6 +1108,8 @@ git commit -m "feat: add onboarding route with profile creation and photo upload
 - Create: `src/routes/spill.tsx`
 
 **Step 1: Create useTodayPrompt hook**
+
+Uses MYT (UTC+8) for date calculation:
 
 ```typescript
 // src/hooks/useTodayPrompt.ts
@@ -769,7 +1121,9 @@ export function useTodayPrompt() {
   return useQuery({
     queryKey: ["todayPrompt"],
     queryFn: async () => {
-      const today = new Date().toISOString().split("T")[0];
+      const today = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })
+      ).toISOString().split("T")[0];
       const { data, error } = await supabase
         .from("prompts")
         .select("*")
@@ -782,29 +1136,34 @@ export function useTodayPrompt() {
 }
 ```
 
-**Step 2: Create useRandomAnswer hook**
+**Step 2: Create useReveals hook**
+
+Calls `get_reveals_for_user` RPC, returns array of reveals:
 
 ```typescript
-// src/hooks/useRandomAnswer.ts
+// src/hooks/useReveals.ts
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
-import type { Answer } from "../lib/types";
 
-export function useRandomAnswer(promptId: string | undefined, userId: string | undefined) {
+export type RevealResult = {
+  reveal_id: string;
+  answer_text: string;
+  answerer_id: string;
+};
+
+export function useReveals(userId: string | undefined, promptId: string | undefined) {
   return useQuery({
-    queryKey: ["randomAnswer", promptId, userId],
+    queryKey: ["reveals", userId, promptId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("answers")
-        .select("*")
-        .eq("prompt_id", promptId!)
-        .neq("user_id", userId!)
-        .limit(1);
+      const { data, error } = await supabase.rpc("get_reveals_for_user", {
+        p_user_id: userId!,
+        p_prompt_id: promptId!,
+        p_limit: 5,
+      });
       if (error) throw error;
-      if (!data || data.length === 0) return null;
-      return data[0] as Answer;
+      return (data ?? []) as RevealResult[];
     },
-    enabled: !!promptId && !!userId,
+    enabled: !!userId && !!promptId,
   });
 }
 ```
@@ -838,7 +1197,7 @@ export function PromptCard({ text, onReady }: Props) {
 }
 ```
 
-**Step 4: Create AnswerInput component**
+**Step 4: Create AnswerInput component (400 char limit)**
 
 ```tsx
 // src/components/AnswerInput.tsx
@@ -860,12 +1219,12 @@ export function AnswerInput({ onSubmit, loading }: Props) {
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        maxLength={280}
+        maxLength={400}
         rows={4}
         placeholder="Say something real..."
         className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text placeholder-spill-muted resize-none focus:outline-none focus:border-spill-red text-lg"
       />
-      <p className="text-spill-muted text-xs mt-2 self-end">{280 - text.length}</p>
+      <p className="text-spill-muted text-xs mt-2 self-end">{400 - text.length}</p>
       <button
         onClick={() => onSubmit(text)}
         disabled={loading || !text.trim()}
@@ -970,18 +1329,23 @@ export function DareButtons({ onDare, onPass, loading }: Props) {
 }
 ```
 
-**Step 7: Create spill route (ties it all together)**
+**Step 7: Create spill route (multi-reveal carousel)**
+
+The core loop: prompt → answer → fetch reveals via RPC → carousel through up to 5 reveal cards → dare/pass each → done.
+
+Subscribes to `matches` table via Supabase Realtime for match alerts.
 
 ```tsx
 // src/routes/spill.tsx
 import { createRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { rootRoute } from "./__root";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useUser } from "../hooks/useUser";
 import { useTodayPrompt } from "../hooks/useTodayPrompt";
-import { useRandomAnswer } from "../hooks/useRandomAnswer";
+import { useReveals } from "../hooks/useReveals";
+import type { RevealResult } from "../hooks/useReveals";
 import { PromptCard } from "../components/PromptCard";
 import { AnswerInput } from "../components/AnswerInput";
 import { RevealCard } from "../components/RevealCard";
@@ -993,7 +1357,7 @@ export const spillRoute = createRoute({
   component: SpillPage,
 });
 
-type Phase = "prompt" | "answer" | "reveal" | "action" | "done";
+type Phase = "prompt" | "answer" | "reveals" | "done";
 
 function SpillPage() {
   const { session } = useAuth();
@@ -1001,14 +1365,43 @@ function SpillPage() {
   const { data: prompt, isLoading: promptLoading } = useTodayPrompt();
   const [phase, setPhase] = useState<Phase>("prompt");
   const [loading, setLoading] = useState(false);
+  const [answered, setAnswered] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [matchAlert, setMatchAlert] = useState(false);
+
   const {
-    data: randomAnswer,
-    isLoading: answerLoading,
-    refetch: fetchAnswer,
-  } = useRandomAnswer(
-    prompt?.id,
-    user?.id,
+    data: reveals,
+    isLoading: revealsLoading,
+    refetch: fetchReveals,
+  } = useReveals(
+    answered ? user?.id : undefined,
+    answered ? prompt?.id : undefined,
   );
+
+  // Subscribe to matches for real-time match alerts
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("match-alerts")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "matches",
+        },
+        (payload) => {
+          const m = payload.new as { user_a_id: string; user_b_id: string };
+          if (m.user_a_id === user.id || m.user_b_id === user.id) {
+            setMatchAlert(true);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
   async function submitAnswer(text: string) {
     if (!prompt || !user) return;
@@ -1021,27 +1414,31 @@ function SpillPage() {
     if (error) {
       alert(error.message);
     } else {
-      await fetchAnswer();
-      setPhase("reveal");
+      setAnswered(true);
+      await fetchReveals();
+      setPhase("reveals");
     }
     setLoading(false);
   }
 
-  async function handleDare() {
-    if (!randomAnswer || !user || !prompt) return;
-    setLoading(true);
-    const { error } = await supabase.from("dares").insert({
-      sender_id: user.id,
-      receiver_id: randomAnswer.user_id,
-      prompt_id: prompt.id,
-    });
-    if (error) alert(error.message);
-    setPhase("done");
-    setLoading(false);
-  }
+  const currentReveal: RevealResult | undefined = reveals?.[currentIndex];
 
-  function handlePass() {
-    setPhase("done");
+  async function handleAction(action: "dare" | "pass") {
+    if (!currentReveal) return;
+    setLoading(true);
+    await supabase
+      .from("reveals")
+      .update({ action, acted_at: new Date().toISOString() })
+      .eq("id", currentReveal.reveal_id);
+
+    const nextIndex = currentIndex + 1;
+    if (nextIndex < (reveals?.length ?? 0)) {
+      setCurrentIndex(nextIndex);
+      setFlipped(false);
+    } else {
+      setPhase("done");
+    }
+    setLoading(false);
   }
 
   if (promptLoading) {
@@ -1062,42 +1459,65 @@ function SpillPage() {
 
   return (
     <div className="min-h-screen bg-spill-bg pb-20">
+      {/* Match alert overlay */}
+      {matchAlert && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-4xl font-bold text-spill-text mb-2">It's a match!</p>
+            <p className="text-spill-muted mb-6">Go say something real.</p>
+            <button
+              onClick={() => setMatchAlert(false)}
+              className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+            >
+              Keep going
+            </button>
+          </div>
+        </div>
+      )}
+
       {phase === "prompt" && (
         <PromptCard text={prompt.text} onReady={() => setPhase("answer")} />
       )}
       {phase === "answer" && (
         <AnswerInput onSubmit={submitAnswer} loading={loading} />
       )}
-      {phase === "reveal" && (
-        answerLoading ? (
+      {phase === "reveals" && (
+        revealsLoading ? (
           <div className="flex items-center justify-center min-h-[60vh]">
-            <p className="text-spill-muted">Finding someone...</p>
+            <p className="text-spill-muted">Finding people...</p>
           </div>
-        ) : randomAnswer ? (
-          <RevealCard
-            answerText={randomAnswer.text}
-            onFlipped={() => setPhase("action")}
-          />
+        ) : reveals && reveals.length > 0 && currentReveal ? (
+          <div>
+            <p className="text-center text-spill-muted text-sm pt-6">
+              {currentIndex + 1} of {reveals.length}
+            </p>
+            <RevealCard
+              key={currentReveal.reveal_id}
+              answerText={currentReveal.answer_text}
+              onFlipped={() => setFlipped(true)}
+            />
+            {flipped && (
+              <DareButtons
+                onDare={() => handleAction("dare")}
+                onPass={() => handleAction("pass")}
+                loading={loading}
+              />
+            )}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-            <p className="text-spill-text text-xl font-bold mb-2">You're early</p>
+            <p className="text-spill-text text-xl font-bold mb-2">Not enough spills yet</p>
             <p className="text-spill-muted text-center">
-              No one else has answered yet. Check back later.
+              Check back later today.
             </p>
           </div>
         )
       )}
-      {phase === "action" && randomAnswer && (
-        <div>
-          <RevealCard answerText={randomAnswer.text} onFlipped={() => {}} />
-          <DareButtons onDare={handleDare} onPass={handlePass} loading={loading} />
-        </div>
-      )}
       {phase === "done" && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-          <p className="text-spill-text text-2xl font-bold mb-2">Done for today</p>
+          <p className="text-spill-text text-2xl font-bold mb-2">You've spilled for today</p>
           <p className="text-spill-muted text-center">
-            Come back tomorrow for a new spill.
+            Check back tomorrow for a new prompt.
           </p>
         </div>
       )}
@@ -1114,8 +1534,8 @@ Expected: PASS
 **Step 9: Commit**
 
 ```bash
-git add src/hooks/useTodayPrompt.ts src/hooks/useRandomAnswer.ts src/components/PromptCard.tsx src/components/AnswerInput.tsx src/components/RevealCard.tsx src/components/DareButtons.tsx src/routes/spill.tsx
-git commit -m "feat: add Today's Spill route with prompt, answer, reveal flip, and dare flow"
+git add src/hooks/useTodayPrompt.ts src/hooks/useReveals.ts src/components/PromptCard.tsx src/components/AnswerInput.tsx src/components/RevealCard.tsx src/components/DareButtons.tsx src/routes/spill.tsx
+git commit -m "feat: add Today's Spill route with multi-reveal carousel and match alerts"
 ```
 
 ---
@@ -1482,6 +1902,8 @@ git commit -m "feat: add Chat route with Supabase Realtime messaging"
 
 **Step 1: Create profile route**
 
+Includes editing gender, show_me, and interests in addition to name/bio/photo:
+
 ```tsx
 // src/routes/profile.tsx
 import { createRoute } from "@tanstack/react-router";
@@ -1490,8 +1912,12 @@ import { rootRoute } from "./__root";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
 import { useUser } from "../hooks/useUser";
+import { useInterestTags } from "../hooks/useInterestTags";
 import { useQueryClient } from "@tanstack/react-query";
 import { PhotoUpload } from "../components/PhotoUpload";
+import { GenderSelect } from "../components/GenderSelect";
+import { ShowMeSelect } from "../components/ShowMeSelect";
+import { InterestPicker } from "../components/InterestPicker";
 
 export const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -1502,10 +1928,14 @@ export const profileRoute = createRoute({
 function ProfilePage() {
   const { session } = useAuth();
   const { data: user } = useUser(session?.user?.id);
+  const { data: tags } = useInterestTags();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
+  const [showMe, setShowMe] = useState<string[]>([]);
+  const [interests, setInterests] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -1514,6 +1944,9 @@ function ProfilePage() {
       setName(user.name);
       setBio(user.bio ?? "");
       setPhotoUrl(user.photo_url);
+      setGender(user.gender);
+      setShowMe(user.show_me);
+      setInterests(user.interests);
     }
   }, [user]);
 
@@ -1522,7 +1955,14 @@ function ProfilePage() {
     setSaving(true);
     const { error } = await supabase
       .from("users")
-      .update({ name, bio: bio || null, photo_url: photoUrl })
+      .update({
+        name,
+        bio: bio || null,
+        photo_url: photoUrl,
+        gender,
+        show_me: showMe,
+        interests,
+      })
       .eq("id", user.id);
     if (error) {
       alert(error.message);
@@ -1552,39 +1992,43 @@ function ProfilePage() {
 
         <div>
           <label className="block text-spill-text text-sm font-medium mb-2">Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red"
-          />
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red" />
         </div>
 
         <div>
           <label className="block text-spill-text text-sm font-medium mb-2">
             Bio <span className="text-spill-muted">({140 - bio.length} left)</span>
           </label>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            maxLength={140}
-            rows={3}
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red"
-          />
+          <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={140} rows={3}
+            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red" />
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={saving || !name}
-          className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
-        >
+        <div>
+          <label className="block text-spill-text text-sm font-medium mb-2">I am a</label>
+          <GenderSelect value={gender} onChange={setGender} />
+        </div>
+
+        <div>
+          <label className="block text-spill-text text-sm font-medium mb-2">Show me</label>
+          <ShowMeSelect value={showMe} onChange={setShowMe} />
+        </div>
+
+        {tags && (
+          <div>
+            <label className="block text-spill-text text-sm font-medium mb-2">Interests</label>
+            <InterestPicker tags={tags} selected={interests} onChange={setInterests} />
+          </div>
+        )}
+
+        <button onClick={handleSave}
+          disabled={saving || !name || !gender || showMe.length === 0 || interests.length < 3}
+          className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity">
           {saving ? "Saving..." : saved ? "Saved!" : "Save changes"}
         </button>
 
-        <button
-          onClick={handleSignOut}
-          className="w-full border border-spill-border text-spill-muted font-semibold py-3 rounded-lg"
-        >
+        <button onClick={handleSignOut}
+          className="w-full border border-spill-border text-spill-muted font-semibold py-3 rounded-lg">
           Sign out
         </button>
       </div>
@@ -1602,7 +2046,7 @@ Expected: PASS
 
 ```bash
 git add src/routes/profile.tsx
-git commit -m "feat: add Profile route with edit and sign out"
+git commit -m "feat: add Profile route with gender, preferences, and interests editing"
 ```
 
 ---
