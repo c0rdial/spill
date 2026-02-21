@@ -79,7 +79,7 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4 shadow-sm"
+          className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4 "
         >
           <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
             Identity
@@ -120,7 +120,7 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4 shadow-sm"
+          className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4 "
         >
           <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
             Preferences
@@ -145,7 +145,7 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4 shadow-sm"
+            className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4 "
           >
             <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
               Interests
@@ -173,7 +173,7 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
               showMe.length === 0 ||
               interests.length < 3
             }
-            className="w-full bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+            className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
           >
             {saving ? "Saving..." : saved ? "Saved!" : "Save changes"}
           </button>

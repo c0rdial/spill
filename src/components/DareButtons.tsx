@@ -28,7 +28,7 @@ export function DareButtons({ onDare, onPass, loading }: Props) {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.95 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
-        className="flex-1 bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+        className="flex-1 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
       >
         Dare
       </motion.button>

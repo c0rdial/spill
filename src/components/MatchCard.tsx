@@ -23,7 +23,7 @@ export function MatchCard({ match }: Props) {
     <Link
       to="/matches/$matchId"
       params={{ matchId: match.id }}
-      className="flex items-center gap-4 p-4 bg-spill-card rounded-xl border border-spill-border shadow-sm"
+      className="flex items-center gap-4 p-4 bg-spill-card rounded-xl border border-spill-border"
     >
       <div className="w-12 h-12 rounded-full bg-spill-border overflow-hidden flex-shrink-0 flex items-center justify-center">
         {other_user.photo_url ? (

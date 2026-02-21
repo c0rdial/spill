@@ -85,7 +85,7 @@ function LoginPage() {
                 onClick={sendOtp}
                 disabled={loading || !email}
                 whileTap={{ scale: 0.97 }}
-                className="w-full mt-4 bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+                className="w-full mt-4 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
               >
                 {loading ? "Sending..." : "Send code"}
               </motion.button>
@@ -117,7 +117,7 @@ function LoginPage() {
                 onClick={verifyOtp}
                 disabled={loading || otp.length < 6}
                 whileTap={{ scale: 0.97 }}
-                className="w-full mt-4 bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+                className="w-full mt-4 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
               >
                 {loading ? "Verifying..." : "Verify"}
               </motion.button>
@@ -132,7 +132,7 @@ function LoginPage() {
         </AnimatePresence>
 
         {error && (
-          <p className="mt-4 text-red-500 text-sm text-center">{error}</p>
+          <p className="mt-4 text-red-400 text-sm text-center">{error}</p>
         )}
 
         <div className="flex items-center gap-3 my-6">

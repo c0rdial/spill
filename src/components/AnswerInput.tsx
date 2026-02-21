@@ -32,7 +32,7 @@ export function AnswerInput({ onSubmit, loading }: Props) {
         onClick={() => onSubmit(text)}
         disabled={loading || !text.trim()}
         whileTap={{ scale: 0.97 }}
-        className="w-full mt-6 bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+        className="w-full mt-6 bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
       >
         {loading ? "Submitting..." : "Spill it"}
       </motion.button>

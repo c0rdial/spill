@@ -1,19 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-spill-red: #FF94CE;
-  --color-spill-orange: #FC7445;
-  --color-spill-blue: #1A5EDB;
-  --color-spill-bg: #FEFCF9;
-  --color-spill-card: #FFFFFF;
-  --color-spill-text: #212322;
-  --color-spill-muted: #8E8E93;
-  --color-spill-border: #E8E4DF;
+  --color-spill-red: #FF3B6F;
+  --color-spill-green: #D7FF81;
+  --color-spill-lavender: #BC96FF;
+  --color-spill-bg: #1A0A3E;
+  --color-spill-card: #2E1065;
+  --color-spill-text: #FAFAFA;
+  --color-spill-muted: #A78BCC;
+  --color-spill-border: #3D2078;
   --font-display: "Playfair Display", Georgia, serif;
-  --font-body: "DM Sans", system-ui, sans-serif;
-}
-
-body {
-  background-image: radial-gradient(circle, #e8e4df 1px, transparent 1px);
-  background-size: 24px 24px;
+  --font-body: "Cabinet Grotesk", system-ui, sans-serif;
 }

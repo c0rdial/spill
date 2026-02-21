@@ -17,7 +17,7 @@ export function ChatMessage({ message, isOwn }: Props) {
       <div
         className={`max-w-[75%] px-4 py-2 rounded-2xl ${
           isOwn
-            ? "bg-gradient-to-r from-spill-red to-spill-orange text-white rounded-br-sm"
+            ? "bg-spill-red text-white rounded-br-sm"
             : "bg-spill-card text-spill-text border border-spill-border rounded-bl-sm"
         }`}
       >

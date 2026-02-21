@@ -29,7 +29,7 @@ export function ChatInput({ onSend, disabled }: Props) {
         <button
           onClick={handleSend}
           disabled={disabled || !text.trim()}
-          className="bg-gradient-to-r from-spill-red to-spill-orange text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
+          className="bg-spill-red text-white px-4 py-2 rounded-full text-sm font-semibold disabled:opacity-50"
         >
           Send
         </button>

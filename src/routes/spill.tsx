@@ -188,14 +188,9 @@ function SpillPage() {
           </div>
         ) : alreadyAnswered ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-            <motion.p
-              className="font-display italic text-3xl font-bold mb-2 bg-gradient-to-r from-spill-red to-spill-orange bg-clip-text text-transparent"
-              animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-              style={{ backgroundSize: "200% 200%" }}
-            >
+            <p className="font-display italic text-3xl font-bold mb-2 text-spill-green">
               You spilled it.
-            </motion.p>
+            </p>
             <p className="text-spill-muted text-center">
               Come back tomorrow — new prompt, new vibes.
             </p>
@@ -213,7 +208,7 @@ function SpillPage() {
       {phase === "done" && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
           <motion.p
-            className="font-display italic text-3xl font-bold mb-2 bg-gradient-to-r from-spill-red to-spill-orange bg-clip-text text-transparent"
+            className="font-display italic text-3xl font-bold mb-2 bg-spill-red bg-clip-text text-transparent"
             animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
             style={{ backgroundSize: "200% 200%" }}
@@ -229,7 +224,7 @@ function SpillPage() {
   );
 }
 
-const PARTICLE_COLORS = ["#FF94CE", "#FC7445", "#1A5EDB"];
+const PARTICLE_COLORS = ["#FF3B6F", "#D7FF81", "#BC96FF"];
 
 const PARTICLES = Array.from({ length: 10 }, (_, i) => {
   const angle = (i / 10) * Math.PI * 2;
@@ -247,7 +242,7 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-spill-bg/95 backdrop-blur-md flex items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -283,7 +278,7 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
         <motion.button
           onClick={onDismiss}
           whileTap={{ scale: 0.97 }}
-          className="bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold px-8 py-3 rounded-lg"
+          className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
