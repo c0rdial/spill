@@ -34,11 +34,15 @@ function ChatPage() {
 
   async function sendMessage(text: string) {
     if (!user) return;
-    await supabase.from("messages").insert({
+    const { error } = await supabase.from("messages").insert({
       match_id: matchId,
       sender_id: user.id,
       text,
     });
+    if (error) {
+      alert(error.message);
+      return;
+    }
     queryClient.invalidateQueries({ queryKey: ["messages", matchId] });
   }
 
@@ -90,7 +94,7 @@ function ChatPage() {
         )}
         <div ref={bottomRef} />
       </div>
-      <ChatInput onSend={sendMessage} disabled={!user} />
+      <ChatInput onSend={sendMessage} disabled={!user || !currentMatch} />
     </div>
   );
 }

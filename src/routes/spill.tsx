@@ -30,12 +30,13 @@ function SpillPage() {
   const { data: existingAnswer, isLoading: answerLoading } = useQuery({
     queryKey: ["myAnswer", user?.id, prompt?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("answers")
         .select("id")
         .eq("user_id", user!.id)
         .eq("prompt_id", prompt!.id)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!user && !!prompt,

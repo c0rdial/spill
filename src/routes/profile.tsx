@@ -64,7 +64,8 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
   }
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) alert(error.message);
   }
 
   return (

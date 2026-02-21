@@ -14,7 +14,7 @@ export function PhotoUpload({ onUploaded, currentUrl }: Props) {
     if (!file) return;
 
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = file.type.split("/")[1] ?? "jpg";
     const path = `${crypto.randomUUID()}.${ext}`;
 
     const { error } = await supabase.storage.from("avatars").upload(path, file);

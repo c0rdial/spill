@@ -51,11 +51,18 @@ function OnboardingPage() {
       return;
     }
 
+    const parsedAge = parseInt(age);
+    if (isNaN(parsedAge) || parsedAge < 18 || parsedAge > 99) {
+      setError("Please enter a valid age (18–99).");
+      setLoading(false);
+      return;
+    }
+
     const { error: insertError } = await supabase.from("users").upsert({
       id: user.id,
       email: user.email,
       name,
-      age: parseInt(age),
+      age: parsedAge,
       gender,
       show_me: showMe,
       interests,
