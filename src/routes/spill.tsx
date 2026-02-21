@@ -106,10 +106,16 @@ function SpillPage() {
   async function handleAction(action: "dare" | "pass") {
     if (!currentReveal) return;
     setLoading(true);
-    await supabase
+    const { error } = await supabase
       .from("reveals")
       .update({ action, acted_at: new Date().toISOString() })
       .eq("id", currentReveal.out_reveal_id);
+
+    if (error) {
+      alert(error.message);
+      setLoading(false);
+      return;
+    }
 
     const nextIndex = currentIndex + 1;
     if (nextIndex < (reveals?.length ?? 0)) {
