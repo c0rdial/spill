@@ -42,27 +42,21 @@ function SpillPage() {
   });
 
   const alreadyAnswered = !!existingAnswer;
-  const [phase, setPhase] = useState<Phase>("prompt");
+  const [userPhase, setUserPhase] = useState<Phase | null>(null);
   const [loading, setLoading] = useState(false);
-  const [answered, setAnswered] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [matchAlert, setMatchAlert] = useState(false);
 
-  useEffect(() => {
-    if (alreadyAnswered && phase === "prompt") {
-      setAnswered(true);
-      setPhase("reveals");
-    }
-  }, [alreadyAnswered, phase]);
+  const phase: Phase = userPhase ?? (alreadyAnswered ? "reveals" : "prompt");
 
   const {
     data: reveals,
     isLoading: revealsLoading,
     refetch: fetchReveals,
   } = useReveals(
-    answered || alreadyAnswered ? user?.id : undefined,
-    answered || alreadyAnswered ? prompt?.id : undefined,
+    alreadyAnswered || phase === "reveals" || phase === "done" ? user?.id : undefined,
+    alreadyAnswered || phase === "reveals" || phase === "done" ? prompt?.id : undefined,
   );
 
   useEffect(() => {
@@ -101,9 +95,8 @@ function SpillPage() {
     if (error) {
       alert(error.message);
     } else {
-      setAnswered(true);
       await fetchReveals();
-      setPhase("reveals");
+      setUserPhase("reveals");
     }
     setLoading(false);
   }
@@ -123,7 +116,7 @@ function SpillPage() {
       setCurrentIndex(nextIndex);
       setFlipped(false);
     } else {
-      setPhase("done");
+      setUserPhase("done");
     }
     setLoading(false);
   }
@@ -178,7 +171,7 @@ function SpillPage() {
       </AnimatePresence>
 
       {phase === "prompt" && (
-        <PromptCard text={prompt.text} onReady={() => setPhase("answer")} />
+        <PromptCard text={prompt.text} onReady={() => setUserPhase("answer")} />
       )}
       {phase === "answer" && (
         <AnswerInput onSubmit={submitAnswer} loading={loading} />

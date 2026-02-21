@@ -36,3 +36,4 @@ supabase/
 
 # Claude Code
 .claude/
+.vercel
