@@ -107,15 +107,19 @@ function SpillPage() {
   async function handleAction(action: "dare" | "pass") {
     if (!currentReveal) return;
     setLoading(true);
-    const { error } = await supabase
-      .from("reveals")
-      .update({ action, acted_at: new Date().toISOString() })
-      .eq("id", currentReveal.out_reveal_id);
+
+    const { data, error } = await supabase.functions.invoke("dare", {
+      body: { reveal_id: currentReveal.out_reveal_id, action },
+    });
 
     if (error) {
       alert(error.message);
       setLoading(false);
       return;
+    }
+
+    if (data.matched) {
+      setMatchAlert(true);
     }
 
     const nextIndex = currentIndex + 1;

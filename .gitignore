@@ -31,8 +31,9 @@ dist-ssr
 # Docs
 docs/
 
-# Supabase local config
-supabase/
+# Supabase local config (keep edge functions tracked)
+supabase/*
+!supabase/functions/
 
 # Claude Code
 .claude/
