@@ -18,6 +18,7 @@ export function useMessages(matchId: string) {
       if (error) throw error;
       return data as Message[];
     },
+    refetchInterval: 3000,
   });
 
   useEffect(() => {

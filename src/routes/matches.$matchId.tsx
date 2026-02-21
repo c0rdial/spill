@@ -1,5 +1,6 @@
 import { createRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { protectedLayout } from "./_protected";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -21,6 +22,7 @@ function ChatPage() {
   const { data: user } = useUser(session?.user?.id);
   const { data: matches } = useMatches(user?.id);
   const { data: messages, isLoading } = useMessages(matchId);
+  const queryClient = useQueryClient();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const currentMatch = matches?.find((m) => m.id === matchId);
@@ -37,6 +39,7 @@ function ChatPage() {
       sender_id: user.id,
       text,
     });
+    queryClient.invalidateQueries({ queryKey: ["messages", matchId] });
   }
 
   return (
