@@ -28,5 +28,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Docs
+docs/
+
+# Supabase local config
+supabase/
+
 # Claude Code
 .claude/
