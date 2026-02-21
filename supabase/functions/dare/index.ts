@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
   const { reveal_id, action } = await req.json();
   if (!reveal_id || !["dare", "pass"].includes(action))
-    return Response.json({ error: "Invalid params" }, { status: 400 });
+    return Response.json({ error: "Invalid params", matched: false });
 
   // Fetch reveal & verify ownership
   const { data: reveal, error: fetchErr } = await admin
@@ -39,11 +39,11 @@ Deno.serve(async (req) => {
     .eq("id", reveal_id)
     .single();
   if (fetchErr || !reveal)
-    return Response.json({ error: "Reveal not found" }, { status: 404 });
+    return Response.json({ error: "Reveal not found", matched: false });
   if (reveal.viewer_id !== user.id)
-    return Response.json({ error: "Not your reveal" }, { status: 403 });
+    return Response.json({ error: "Not your reveal", matched: false });
   if (reveal.action !== "pending")
-    return Response.json({ error: "Already acted" }, { status: 409 });
+    return Response.json({ error: "Already acted", matched: false });
 
   // Update reveal
   const { error: updateErr } = await admin
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     .update({ action, acted_at: new Date().toISOString() })
     .eq("id", reveal_id);
   if (updateErr)
-    return Response.json({ error: updateErr.message }, { status: 500 });
+    return Response.json({ error: updateErr.message, matched: false });
 
   if (action === "pass") return Response.json({ matched: false });
 
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     .from("matches")
     .insert({ user_a_id, user_b_id, prompt_id: reveal.prompt_id });
   if (matchErr && !matchErr.message.includes("duplicate"))
-    return Response.json({ error: matchErr.message }, { status: 500 });
+    return Response.json({ error: matchErr.message, matched: false });
 
   return Response.json({ matched: true });
 });
