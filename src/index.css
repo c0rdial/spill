@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@theme {
+  --color-spill-red: #C0392B;
+  --color-spill-bg: #0A0A0A;
+  --color-spill-card: #1A1A1A;
+  --color-spill-text: #FAFAFA;
+  --color-spill-muted: #6B7280;
+  --color-spill-border: #2A2A2A;
+}

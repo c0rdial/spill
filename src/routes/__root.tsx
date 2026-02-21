@@ -2,7 +2,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 
 export const rootRoute = createRootRoute({
   component: () => (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-spill-bg text-spill-text">
       <Outlet />
     </div>
   ),
