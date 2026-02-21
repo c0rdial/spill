@@ -22,7 +22,7 @@ export function PromptCard({ text, onReady }: Props) {
       <motion.button
         onClick={onReady}
         whileTap={{ scale: 0.97 }}
-        className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+        className="bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold px-8 py-3 rounded-lg"
       >
         Answer this
       </motion.button>

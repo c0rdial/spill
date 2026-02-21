@@ -188,30 +188,40 @@ function SpillPage() {
           </div>
         ) : alreadyAnswered ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-            <p className="text-spill-text text-2xl font-bold mb-2">
-              You've spilled for today
-            </p>
+            <motion.p
+              className="font-display italic text-3xl font-bold mb-2 bg-gradient-to-r from-spill-red to-spill-orange bg-clip-text text-transparent"
+              animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              style={{ backgroundSize: "200% 200%" }}
+            >
+              You spilled it.
+            </motion.p>
             <p className="text-spill-muted text-center">
-              Check back tomorrow for a new prompt.
+              Come back tomorrow — new prompt, new vibes.
             </p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
             <p className="text-spill-text text-xl font-bold mb-2">
-              Not enough spills yet
+              Still brewing...
             </p>
             <p className="text-spill-muted text-center">
-              Check back later today.
+              Not enough spills yet. Check back in a bit!
             </p>
           </div>
         ))}
       {phase === "done" && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-          <p className="text-spill-text text-2xl font-bold mb-2">
-            You've spilled for today
-          </p>
+          <motion.p
+            className="font-display italic text-3xl font-bold mb-2 bg-gradient-to-r from-spill-red to-spill-orange bg-clip-text text-transparent"
+            animate={{ backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            style={{ backgroundSize: "200% 200%" }}
+          >
+            You spilled it.
+          </motion.p>
           <p className="text-spill-muted text-center">
-            Check back tomorrow for a new prompt.
+            Come back tomorrow — new prompt, new vibes.
           </p>
         </div>
       )}
@@ -219,15 +229,17 @@ function SpillPage() {
   );
 }
 
+const PARTICLE_COLORS = ["#FF94CE", "#FC7445", "#1A5EDB"];
+
 const PARTICLES = Array.from({ length: 10 }, (_, i) => {
   const angle = (i / 10) * Math.PI * 2;
-  // Deterministic variation per particle using golden ratio offset
   const jitter = ((i * 1.618) % 1);
   const dist = 80 + jitter * 60;
   return {
     x: Math.cos(angle) * dist,
     y: Math.sin(angle) * dist,
     size: 4 + jitter * 4,
+    color: PARTICLE_COLORS[i % PARTICLE_COLORS.length],
   };
 });
 
@@ -235,7 +247,7 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+      className="fixed inset-0 z-50 bg-white/90 backdrop-blur-md flex items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -245,8 +257,8 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
         {PARTICLES.map((p, i) => (
           <motion.div
             key={i}
-            className="absolute left-1/2 top-1/2 rounded-full bg-spill-red"
-            style={{ width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2 }}
+            className="absolute left-1/2 top-1/2 rounded-full"
+            style={{ width: p.size, height: p.size, marginLeft: -p.size / 2, marginTop: -p.size / 2, backgroundColor: p.color }}
             initial={{ scale: 0, opacity: 1, x: 0, y: 0 }}
             animate={{ scale: 1, opacity: 0, x: p.x, y: p.y }}
             transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
@@ -271,7 +283,7 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
         <motion.button
           onClick={onDismiss}
           whileTap={{ scale: 0.97 }}
-          className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+          className="bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold px-8 py-3 rounded-lg"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}

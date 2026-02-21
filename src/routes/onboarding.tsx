@@ -144,7 +144,7 @@ function OnboardingPage() {
                   onClick={advanceFromBasic}
                   disabled={!name || !age}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+                  className="w-full bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
                 >
                   Next
                 </motion.button>
@@ -177,7 +177,7 @@ function OnboardingPage() {
                   onClick={() => setStep("profile")}
                   disabled={!gender || showMe.length === 0}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+                  className="w-full bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
                 >
                   Next
                 </motion.button>
@@ -215,7 +215,7 @@ function OnboardingPage() {
                 <motion.button
                   onClick={() => setStep("interests")}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg transition-opacity"
+                  className="w-full bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg transition-opacity"
                 >
                   Next
                 </motion.button>
@@ -241,7 +241,7 @@ function OnboardingPage() {
                   onClick={handleSubmit}
                   disabled={loading || interests.length < 3}
                   whileTap={{ scale: 0.97 }}
-                  className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
+                  className="w-full bg-gradient-to-r from-spill-red to-spill-orange text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
                 >
                   {loading ? "Saving..." : "Start spilling"}
                 </motion.button>
@@ -251,7 +251,7 @@ function OnboardingPage() {
         </AnimatePresence>
 
         {error && (
-          <p className="text-red-400 text-sm text-center">{error}</p>
+          <p className="text-red-500 text-sm text-center">{error}</p>
         )}
       </div>
     </div>

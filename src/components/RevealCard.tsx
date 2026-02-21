@@ -50,18 +50,18 @@ export function RevealCard({ answerText, onFlipped }: Props) {
             style={{
               backfaceVisibility: "hidden",
               transform: "rotateY(180deg)",
-              background: "linear-gradient(135deg, #1A0808, #1A0A0A)",
+              background: "linear-gradient(135deg, #FFF0F5, #FFF5EB)",
             }}
             animate={
               flipped
                 ? {
                     boxShadow: [
-                      "0 0 40px rgba(192,57,43,0.15)",
-                      "0 0 40px rgba(192,57,43,0.35)",
-                      "0 0 40px rgba(192,57,43,0.15)",
+                      "0 0 40px rgba(255,148,206,0.15)",
+                      "0 0 40px rgba(255,148,206,0.35)",
+                      "0 0 40px rgba(255,148,206,0.15)",
                     ],
                   }
-                : { boxShadow: "0 0 40px rgba(192,57,43,0.15)" }
+                : { boxShadow: "0 0 40px rgba(255,148,206,0.15)" }
             }
             transition={
               flipped

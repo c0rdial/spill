@@ -1,12 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-spill-red: #C0392B;
-  --color-spill-bg: #0A0A0A;
-  --color-spill-card: #1A1A1A;
-  --color-spill-text: #FAFAFA;
-  --color-spill-muted: #6B7280;
-  --color-spill-border: #2A2A2A;
+  --color-spill-red: #FF94CE;
+  --color-spill-orange: #FC7445;
+  --color-spill-blue: #1A5EDB;
+  --color-spill-bg: #FEFCF9;
+  --color-spill-card: #FFFFFF;
+  --color-spill-text: #212322;
+  --color-spill-muted: #8E8E93;
+  --color-spill-border: #E8E4DF;
   --font-display: "Playfair Display", Georgia, serif;
-  --font-body: "Source Sans 3", system-ui, sans-serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+}
+
+body {
+  background-image: radial-gradient(circle, #e8e4df 1px, transparent 1px);
+  background-size: 24px 24px;
 }
