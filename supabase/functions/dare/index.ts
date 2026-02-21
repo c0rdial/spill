@@ -15,12 +15,8 @@ Deno.serve(async (req) => {
   if (!authHeader)
     return Response.json({ error: "Missing auth" }, { status: 401 });
 
+  const token = authHeader.replace("Bearer ", "");
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const userClient = createClient(
-    supabaseUrl,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
   const admin = createClient(
     supabaseUrl,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -28,7 +24,7 @@ Deno.serve(async (req) => {
 
   const {
     data: { user },
-  } = await userClient.auth.getUser();
+  } = await admin.auth.getUser(token);
   if (!user)
     return Response.json({ error: "Invalid token" }, { status: 401 });
 

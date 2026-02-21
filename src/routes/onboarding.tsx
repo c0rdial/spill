@@ -38,6 +38,16 @@ function OnboardingPage() {
 
   const stepIndex = steps.indexOf(step);
 
+  function advanceFromBasic() {
+    const parsedAge = parseInt(age);
+    if (isNaN(parsedAge) || parsedAge < 18 || parsedAge > 99) {
+      setError("Please enter a valid age (18–99).");
+      return;
+    }
+    setError("");
+    setStep("preferences");
+  }
+
   async function handleSubmit() {
     setLoading(true);
     setError("");
@@ -51,18 +61,11 @@ function OnboardingPage() {
       return;
     }
 
-    const parsedAge = parseInt(age);
-    if (isNaN(parsedAge) || parsedAge < 18 || parsedAge > 99) {
-      setError("Please enter a valid age (18–99).");
-      setLoading(false);
-      return;
-    }
-
     const { error: insertError } = await supabase.from("users").upsert({
       id: user.id,
       email: user.email,
       name,
-      age: parsedAge,
+      age: parseInt(age),
       gender,
       show_me: showMe,
       interests,
@@ -138,7 +141,7 @@ function OnboardingPage() {
                   />
                 </div>
                 <motion.button
-                  onClick={() => setStep("preferences")}
+                  onClick={advanceFromBasic}
                   disabled={!name || !age}
                   whileTap={{ scale: 0.97 }}
                   className="w-full bg-spill-red text-white font-semibold py-3 rounded-lg disabled:opacity-50 transition-opacity"
