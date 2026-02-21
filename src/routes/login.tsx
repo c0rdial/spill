@@ -108,8 +108,8 @@ function LoginPage() {
                 onKeyDown={(e) =>
                   e.key === "Enter" && otp.length >= 6 && verifyOtp()
                 }
-                placeholder="000000"
-                maxLength={6}
+                placeholder="00000000"
+                maxLength={8}
                 className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 placeholder-spill-muted text-center text-2xl tracking-widest focus:outline-none focus:border-spill-red"
               />
               <button
