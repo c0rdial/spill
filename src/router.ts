@@ -6,13 +6,19 @@ import { onboardingRoute } from "./routes/onboarding";
 import { protectedLayout } from "./routes/_protected";
 import { spillRoute } from "./routes/spill";
 import { matchesRoute } from "./routes/matches";
+import { chatRoute } from "./routes/matches.$matchId";
 import { profileRoute } from "./routes/profile";
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   onboardingRoute,
-  protectedLayout.addChildren([spillRoute, matchesRoute, profileRoute]),
+  protectedLayout.addChildren([
+    spillRoute,
+    matchesRoute,
+    chatRoute,
+    profileRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });
