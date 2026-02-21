@@ -55,23 +55,37 @@ const SHAPE_MAP = { heart: Heart, star: Star, triangle: Triangle, circle: Circle
 type Props = {
   shapes: Shape[];
   className?: string;
+  animation?: "scale" | "fall";
 };
 
 export type { Shape };
 
-export function DecoShapes({ shapes, className = "" }: Props) {
+export function DecoShapes({ shapes, className = "", animation = "scale" }: Props) {
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
       {shapes.map((s, i) => {
         const Comp = SHAPE_MAP[s.type];
+        const isFall = animation === "fall";
         return (
           <motion.div
             key={i}
             className="absolute"
-            style={{ left: `${s.x}%`, top: `${s.y}%`, rotate: s.rotate }}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: s.delay, ease: [0.16, 1, 0.3, 1] }}
+            style={{ left: `${s.x}%`, top: isFall ? undefined : `${s.y}%`, rotate: s.rotate }}
+            initial={
+              isFall
+                ? { opacity: 0, y: -80, rotate: s.rotate - 30 }
+                : { opacity: 0, scale: 0.5 }
+            }
+            animate={
+              isFall
+                ? { opacity: 1, y: `${s.y}vh`, rotate: s.rotate }
+                : { opacity: 1, scale: 1 }
+            }
+            transition={
+              isFall
+                ? { duration: 0.8, delay: s.delay, ease: [0.22, 1, 0.36, 1] }
+                : { duration: 0.5, delay: s.delay, ease: [0.16, 1, 0.3, 1] }
+            }
           >
             <Comp color={s.color} size={s.size} />
           </motion.div>

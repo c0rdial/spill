@@ -1,5 +1,8 @@
 import { Link, useMatchRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
+import { useAuth } from "../hooks/useAuth";
+import { useUser } from "../hooks/useUser";
+import { useMatches } from "../hooks/useMatches";
 
 const tabs = [
   {
@@ -32,8 +35,20 @@ const tabs = [
   },
 ];
 
+const MATCHES_SEEN_KEY = "spill_matches_seen_at";
+
 export function BottomNav() {
   const matchRoute = useMatchRoute();
+  const { session } = useAuth();
+  const { data: user } = useUser(session?.user?.id);
+  const { data: matches } = useMatches(user?.id);
+
+  const newMatchCount = (() => {
+    if (!matches?.length) return 0;
+    const lastSeen = localStorage.getItem(MATCHES_SEEN_KEY);
+    if (!lastSeen) return matches.length;
+    return matches.filter((m) => m.created_at > lastSeen).length;
+  })();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-spill-card/95 backdrop-blur-sm border-t border-spill-border">
@@ -48,7 +63,14 @@ export function BottomNav() {
                 isActive ? "text-spill-red" : "text-spill-muted"
               }`}
             >
-              {tab.icon}
+              <span className="relative">
+                {tab.icon}
+                {tab.to === "/matches" && newMatchCount > 0 && (
+                  <span className="absolute -top-1 -right-2.5 bg-spill-green text-spill-bg text-[9px] font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full px-1">
+                    {newMatchCount}
+                  </span>
+                )}
+              </span>
               <span className="text-[10px] font-medium uppercase tracking-widest">
                 {tab.label}
               </span>

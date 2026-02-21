@@ -1,4 +1,5 @@
 import { createRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { protectedLayout } from "./_protected";
 import { useAuth } from "../hooks/useAuth";
@@ -16,6 +17,10 @@ function MatchesPage() {
   const { session } = useAuth();
   const { data: user } = useUser(session?.user?.id);
   const { data: matches, isLoading } = useMatches(user?.id);
+
+  useEffect(() => {
+    localStorage.setItem("spill_matches_seen_at", new Date().toISOString());
+  }, []);
 
   return (
     <div className="min-h-screen bg-spill-bg pb-20">

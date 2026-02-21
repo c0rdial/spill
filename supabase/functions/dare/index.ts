@@ -79,11 +79,13 @@ Deno.serve(async (req) => {
       ? reveal.answerer_id
       : reveal.viewer_id;
 
-  const { error: matchErr } = await admin
+  const { data: newMatch, error: matchErr } = await admin
     .from("matches")
-    .insert({ user_a_id, user_b_id, prompt_id: reveal.prompt_id });
+    .insert({ user_a_id, user_b_id, prompt_id: reveal.prompt_id })
+    .select("id")
+    .single();
   if (matchErr && !matchErr.message.includes("duplicate"))
     return json({ error: matchErr.message, matched: false });
 
-  return json({ matched: true });
+  return json({ matched: true, match_id: newMatch?.id ?? null });
 });

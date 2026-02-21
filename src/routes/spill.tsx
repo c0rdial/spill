@@ -1,4 +1,4 @@
-import { createRoute } from "@tanstack/react-router";
+import { createRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
@@ -49,7 +49,7 @@ function SpillPage() {
   const [loading, setLoading] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [matchAlert, setMatchAlert] = useState(false);
+  const [matchAlert, setMatchAlert] = useState<string | null>(null);
 
   const phase: Phase = userPhase ?? (alreadyAnswered ? "reveals" : "prompt");
 
@@ -74,9 +74,9 @@ function SpillPage() {
           table: "matches",
         },
         (payload) => {
-          const m = payload.new as { user_a_id: string; user_b_id: string };
+          const m = payload.new as { id: string; user_a_id: string; user_b_id: string };
           if (m.user_a_id === user.id || m.user_b_id === user.id) {
-            setMatchAlert(true);
+            setMatchAlert(m.id);
           }
         },
       )
@@ -121,7 +121,7 @@ function SpillPage() {
     }
 
     if (data.matched) {
-      setMatchAlert(true);
+      setMatchAlert(data.match_id);
     }
 
     const nextIndex = currentIndex + 1;
@@ -153,7 +153,9 @@ function SpillPage() {
   return (
     <div className="min-h-screen bg-spill-bg pb-20">
       <AnimatePresence>
-        {matchAlert && <MatchCeremony onDismiss={() => setMatchAlert(false)} />}
+        {matchAlert && (
+          <MatchCeremony matchId={matchAlert} onDismiss={() => setMatchAlert(null)} />
+        )}
       </AnimatePresence>
 
       {phase === "prompt" && (
@@ -234,7 +236,9 @@ const MATCH_SHAPES: Shape[] = [
   { type: "heart", color: "#FF3B6F", x: 40, y: 3, size: 22, rotate: 10, delay: 0.14 },
 ];
 
-function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
+function MatchCeremony({ matchId, onDismiss }: { matchId: string; onDismiss: () => void }) {
+  const navigate = useNavigate();
+
   return (
     <motion.div
       className="fixed inset-0 z-50 bg-spill-bg/95 backdrop-blur-md flex items-center justify-center"
@@ -262,16 +266,27 @@ function MatchCeremony({ onDismiss }: { onDismiss: () => void }) {
         >
           Go say something real.
         </motion.p>
-        <motion.button
-          onClick={onDismiss}
-          whileTap={{ scale: 0.97 }}
-          className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+        <motion.div
+          className="flex flex-col gap-3"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
         >
-          Keep going
-        </motion.button>
+          <motion.button
+            onClick={() => navigate({ to: "/matches/$matchId", params: { matchId } })}
+            whileTap={{ scale: 0.97 }}
+            className="bg-spill-green text-spill-bg font-semibold px-8 py-3 rounded-lg"
+          >
+            Say hi!
+          </motion.button>
+          <motion.button
+            onClick={onDismiss}
+            whileTap={{ scale: 0.97 }}
+            className="border border-spill-border text-spill-text font-semibold px-8 py-3 rounded-lg"
+          >
+            Keep going
+          </motion.button>
+        </motion.div>
       </div>
     </motion.div>
   );

@@ -63,7 +63,7 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center px-6">
-      <DecoShapes shapes={LOGIN_SHAPES} />
+      <DecoShapes shapes={LOGIN_SHAPES} animation="fall" />
       <motion.div
         className="relative z-10 w-full"
         initial={{ opacity: 0, y: 24 }}
