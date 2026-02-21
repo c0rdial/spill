@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+
 type Props = {
   text: string;
   onReady: () => void;
@@ -5,11 +7,16 @@ type Props = {
 
 export function PromptCard({ text, onReady }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+    <motion.div
+      className="flex flex-col items-center justify-center min-h-[60vh] px-6"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
       <p className="text-spill-muted text-sm font-medium uppercase tracking-wider mb-6">
         Today's spill
       </p>
-      <h2 className="text-2xl font-bold text-spill-text text-center leading-snug mb-10">
+      <h2 className="font-display text-2xl text-spill-text text-center leading-snug mb-10">
         {text}
       </h2>
       <button
@@ -18,6 +25,6 @@ export function PromptCard({ text, onReady }: Props) {
       >
         Answer this
       </button>
-    </div>
+    </motion.div>
   );
 }

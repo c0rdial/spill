@@ -1,6 +1,7 @@
 import { createRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { protectedLayout } from "./_protected";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../hooks/useAuth";
@@ -145,22 +146,36 @@ function SpillPage() {
 
   return (
     <div className="min-h-screen bg-spill-bg pb-20">
-      {matchAlert && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-4xl font-bold text-spill-text mb-2">
-              It's a match!
-            </p>
-            <p className="text-spill-muted mb-6">Go say something real.</p>
-            <button
-              onClick={() => setMatchAlert(false)}
-              className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+      <AnimatePresence>
+        {matchAlert && (
+          <motion.div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.85 }}
+              transition={{ duration: 0.4, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             >
-              Keep going
-            </button>
-          </div>
-        </div>
-      )}
+              <p className="font-display italic text-4xl text-spill-text mb-2">
+                It's a match.
+              </p>
+              <p className="text-spill-muted mb-6">Go say something real.</p>
+              <button
+                onClick={() => setMatchAlert(false)}
+                className="bg-spill-red text-white font-semibold px-8 py-3 rounded-lg"
+              >
+                Keep going
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {phase === "prompt" && (
         <PromptCard text={prompt.text} onReady={() => setPhase("answer")} />

@@ -72,63 +72,73 @@ function ProfileForm({ user, tags }: { user: User; tags: InterestTag[] }) {
         <h1 className="text-3xl font-bold text-spill-text">Profile</h1>
       </div>
       <div className="px-6 space-y-6">
-        <div className="flex justify-center">
-          <PhotoUpload onUploaded={setPhotoUrl} currentUrl={photoUrl} />
-        </div>
-
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">
-            Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red"
-          />
-        </div>
-
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">
-            Bio{" "}
-            <span className="text-spill-muted">
-              ({140 - bio.length} left)
-            </span>
-          </label>
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            maxLength={140}
-            rows={3}
-            className="w-full bg-spill-card border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red"
-          />
-        </div>
-
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">
-            I am a
-          </label>
-          <GenderSelect value={gender} onChange={setGender} />
-        </div>
-
-        <div>
-          <label className="block text-spill-text text-sm font-medium mb-2">
-            Show me
-          </label>
-          <ShowMeSelect value={showMe} onChange={setShowMe} />
-        </div>
-
-        {tags.length > 0 && (
+        {/* Identity */}
+        <section className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
+            Identity
+          </p>
+          <div className="flex justify-center">
+            <PhotoUpload onUploaded={setPhotoUrl} currentUrl={photoUrl} />
+          </div>
           <div>
             <label className="block text-spill-text text-sm font-medium mb-2">
-              Interests
+              Name
             </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full bg-spill-bg border border-spill-border rounded-lg px-4 py-3 text-spill-text focus:outline-none focus:border-spill-red"
+            />
+          </div>
+          <div>
+            <label className="block text-spill-text text-sm font-medium mb-2">
+              Bio{" "}
+              <span className="text-spill-muted">
+                ({140 - bio.length} left)
+              </span>
+            </label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              maxLength={140}
+              rows={3}
+              className="w-full bg-spill-bg border border-spill-border rounded-lg px-4 py-3 text-spill-text resize-none focus:outline-none focus:border-spill-red"
+            />
+          </div>
+        </section>
+
+        {/* Preferences */}
+        <section className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
+            Preferences
+          </p>
+          <div>
+            <label className="block text-spill-text text-sm font-medium mb-2">
+              I am a
+            </label>
+            <GenderSelect value={gender} onChange={setGender} />
+          </div>
+          <div>
+            <label className="block text-spill-text text-sm font-medium mb-2">
+              Show me
+            </label>
+            <ShowMeSelect value={showMe} onChange={setShowMe} />
+          </div>
+        </section>
+
+        {/* Interests */}
+        {tags.length > 0 && (
+          <section className="bg-spill-card border border-spill-border rounded-xl p-5 space-y-4">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-spill-muted">
+              Interests
+            </p>
             <InterestPicker
               tags={tags}
               selected={interests}
               onChange={setInterests}
             />
-          </div>
+          </section>
         )}
 
         <button

@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+
 type Props = {
   onDare: () => void;
   onPass: () => void;
@@ -6,7 +8,12 @@ type Props = {
 
 export function DareButtons({ onDare, onPass, loading }: Props) {
   return (
-    <div className="flex gap-4 px-6 mt-8">
+    <motion.div
+      className="flex gap-4 px-6 mt-8"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    >
       <button
         onClick={onPass}
         disabled={loading}
@@ -21,6 +28,6 @@ export function DareButtons({ onDare, onPass, loading }: Props) {
       >
         Dare
       </button>
-    </div>
+    </motion.div>
   );
 }

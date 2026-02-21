@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 type Props = {
   onSubmit: (text: string) => void;
@@ -9,7 +10,12 @@ export function AnswerInput({ onSubmit, loading }: Props) {
   const [text, setText] = useState("");
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
+    <motion.div
+      className="flex flex-col items-center justify-center min-h-[60vh] px-6"
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
       <p className="text-spill-muted text-sm font-medium uppercase tracking-wider mb-6">
         Your answer
       </p>
@@ -29,6 +35,6 @@ export function AnswerInput({ onSubmit, loading }: Props) {
       >
         {loading ? "Submitting..." : "Spill it"}
       </button>
-    </div>
+    </motion.div>
   );
 }

@@ -7,4 +7,6 @@
   --color-spill-text: #FAFAFA;
   --color-spill-muted: #6B7280;
   --color-spill-border: #2A2A2A;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Source Sans 3", system-ui, sans-serif;
 }
