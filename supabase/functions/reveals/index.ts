@@ -117,6 +117,57 @@ Deno.serve(async (req) => {
         { onConflict: "viewer_id,answerer_id,prompt_id", ignoreDuplicates: true },
       );
     }
+
+    // --- Reverse reveals: give earlier answerers a card for the caller ---
+    const { data: reverseExisting } = await admin
+      .from("reveals")
+      .select("viewer_id")
+      .eq("answerer_id", user.id)
+      .eq("prompt_id", prompt_id);
+
+    const alreadyHasReversSet = new Set(
+      (reverseExisting ?? []).map((r) => r.viewer_id),
+    );
+
+    const reverseEligible = candidateIds.filter((id) => {
+      if (alreadyHasReversSet.has(id) || matchedSet.has(id)) return false;
+      const p = profileMap.get(id);
+      if (!p) return false;
+      return (
+        (p.show_me as string[]).includes(callerGender) &&
+        callerShowMe.includes(p.gender)
+      );
+    });
+
+    if (reverseEligible.length > 0) {
+      // Count pending reveals per eligible user for this prompt
+      const { data: pendingCounts } = await admin
+        .from("reveals")
+        .select("viewer_id")
+        .eq("prompt_id", prompt_id)
+        .eq("action", "pending")
+        .in("viewer_id", reverseEligible);
+
+      const countMap = new Map<string, number>();
+      for (const r of pendingCounts ?? []) {
+        countMap.set(r.viewer_id, (countMap.get(r.viewer_id) ?? 0) + 1);
+      }
+
+      const reverseRows = reverseEligible
+        .filter((id) => (countMap.get(id) ?? 0) < 5)
+        .map((id) => ({
+          viewer_id: id,
+          answerer_id: user.id,
+          prompt_id,
+        }));
+
+      if (reverseRows.length > 0) {
+        await admin.from("reveals").upsert(reverseRows, {
+          onConflict: "viewer_id,answerer_id,prompt_id",
+          ignoreDuplicates: true,
+        });
+      }
+    }
   }
 
   // Return ALL pending reveals for this user+prompt

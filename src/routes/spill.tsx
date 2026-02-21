@@ -98,7 +98,6 @@ function SpillPage() {
     if (error) {
       alert(error.message);
     } else {
-      await fetchReveals();
       setUserPhase("reveals");
     }
     setLoading(false);
@@ -129,6 +128,7 @@ function SpillPage() {
       setCurrentIndex(nextIndex);
       setFlipped(false);
     } else {
+      fetchReveals();
       setUserPhase("done");
     }
     setLoading(false);
@@ -211,12 +211,36 @@ function SpillPage() {
         ))}
       {phase === "done" && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-6">
-          <p className="font-display italic text-3xl font-bold mb-2 text-spill-green">
-            You spilled it.
-          </p>
-          <p className="text-spill-muted text-center">
-            Come back tomorrow — new prompt, new vibes.
-          </p>
+          {reveals && reveals.length > 0 ? (
+            <>
+              <p className="font-display italic text-3xl font-bold mb-2 text-spill-text">
+                New spills just dropped
+              </p>
+              <p className="text-spill-muted text-center mb-6">
+                Someone new answered — go see what they said.
+              </p>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  setCurrentIndex(0);
+                  setFlipped(false);
+                  setUserPhase("reveals");
+                }}
+                className="bg-spill-green text-spill-bg font-semibold px-8 py-3 rounded-lg"
+              >
+                See new cards
+              </motion.button>
+            </>
+          ) : (
+            <>
+              <p className="font-display italic text-3xl font-bold mb-2 text-spill-green">
+                You spilled it.
+              </p>
+              <p className="text-spill-muted text-center">
+                Come back tomorrow — new prompt, new vibes.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

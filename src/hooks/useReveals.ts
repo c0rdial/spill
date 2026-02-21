@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../lib/supabase";
 
 export type RevealResult = {
@@ -11,7 +12,9 @@ export function useReveals(
   userId: string | undefined,
   promptId: string | undefined,
 ) {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["reveals", userId, promptId],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("reveals", {
@@ -22,4 +25,32 @@ export function useReveals(
     },
     enabled: !!userId && !!promptId,
   });
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`reveals:${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "reveals",
+          filter: `viewer_id=eq.${userId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: ["reveals", userId, promptId],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, promptId, queryClient]);
+
+  return query;
 }
