@@ -55,7 +55,7 @@ const SHAPE_MAP = { heart: Heart, star: Star, triangle: Triangle, circle: Circle
 type Props = {
   shapes: Shape[];
   className?: string;
-  animation?: "scale" | "fall";
+  animation?: "scale" | "fall" | "float";
 };
 
 export type { Shape };
@@ -63,6 +63,9 @@ export type { Shape };
 export function DecoShapes({ shapes, className = "", animation = "scale" }: Props) {
   if (animation === "fall") {
     return <FallingShapes shapes={shapes} className={className} />;
+  }
+  if (animation === "float") {
+    return <FloatingShapes shapes={shapes} className={className} />;
   }
 
   return (
@@ -83,6 +86,40 @@ export function DecoShapes({ shapes, className = "", animation = "scale" }: Prop
         );
       })}
     </div>
+  );
+}
+
+function FloatingShapes({ shapes, className = "" }: { shapes: Shape[]; className?: string }) {
+  return (
+    <>
+      <style>{`
+        @keyframes shape-float {
+          0%, 100% { transform: translateY(0) rotate(var(--r-base)); }
+          50% { transform: translateY(-15px) rotate(calc(var(--r-base) + 8deg)); }
+        }
+      `}</style>
+      <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+        {shapes.map((s, i) => {
+          const Comp = SHAPE_MAP[s.type];
+          const duration = 3 + s.delay * 4;
+          return (
+            <div
+              key={i}
+              className="absolute"
+              style={{
+                left: `${s.x}%`,
+                top: `${s.y}%`,
+                opacity: 0.5,
+                "--r-base": `${s.rotate}deg`,
+                animation: `shape-float ${duration}s ${s.delay}s ease-in-out infinite`,
+              } as React.CSSProperties}
+            >
+              <Comp color={s.color} size={s.size} />
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

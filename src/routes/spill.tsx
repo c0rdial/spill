@@ -166,8 +166,20 @@ function SpillPage() {
       )}
       {phase === "reveals" &&
         (revealsLoading ? (
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <p className="text-spill-muted">Finding people...</p>
+          <div className="relative flex items-center justify-center min-h-[60vh]">
+            <style>{`
+              @keyframes glow-pulse {
+                0%, 100% { text-shadow: 0 0 8px rgba(188, 150, 255, 0.3); }
+                50% { text-shadow: 0 0 20px rgba(188, 150, 255, 0.7), 0 0 40px rgba(188, 150, 255, 0.3); }
+              }
+            `}</style>
+            <DecoShapes shapes={FINDING_SHAPES} animation="float" />
+            <p
+              className="relative z-10 text-spill-muted text-lg font-display italic"
+              style={{ animation: "glow-pulse 2s ease-in-out infinite" }}
+            >
+              Finding people...
+            </p>
           </div>
         ) : reveals && reveals.length > 0 && currentReveal ? (
           <div>
@@ -246,6 +258,15 @@ function SpillPage() {
     </div>
   );
 }
+
+const FINDING_SHAPES: Shape[] = [
+  { type: "circle", color: "#BC96FF", x: 12, y: 20, size: 24, rotate: 0, delay: 0 },
+  { type: "star", color: "#D7FF81", x: 80, y: 15, size: 20, rotate: 15, delay: 0.3 },
+  { type: "blob", color: "#BC96FF", x: 70, y: 70, size: 28, rotate: -20, delay: 0.6 },
+  { type: "triangle", color: "#FF3B6F", x: 20, y: 75, size: 18, rotate: 30, delay: 0.9 },
+  { type: "heart", color: "#FF3B6F", x: 85, y: 45, size: 22, rotate: -10, delay: 0.4 },
+  { type: "star", color: "#D7FF81", x: 30, y: 40, size: 16, rotate: 25, delay: 0.7 },
+];
 
 const MATCH_SHAPES: Shape[] = [
   { type: "heart", color: "#FF3B6F", x: 8, y: 8, size: 36, rotate: -15, delay: 0.05 },
