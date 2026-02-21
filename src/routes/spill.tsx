@@ -170,6 +170,9 @@ function SpillPage() {
             <p className="text-center text-spill-muted text-sm pt-6">
               {currentIndex + 1} of {reveals.length}
             </p>
+            <p className="text-center text-spill-muted text-sm px-6 mt-2 mb-2">
+              {prompt.text}
+            </p>
             <RevealCard
               key={currentReveal.out_reveal_id}
               answerText={currentReveal.out_answer_text}
