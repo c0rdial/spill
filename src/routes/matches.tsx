@@ -19,8 +19,10 @@ function MatchesPage() {
   const { data: matches, isLoading } = useMatches(user?.id);
 
   useEffect(() => {
-    localStorage.setItem("spill_matches_seen_at", new Date().toISOString());
-  }, []);
+    if (!isLoading) {
+      localStorage.setItem("spill_matches_seen_at", new Date().toISOString());
+    }
+  }, [isLoading]);
 
   return (
     <div className="min-h-screen bg-spill-bg pb-20">

@@ -61,36 +61,64 @@ type Props = {
 export type { Shape };
 
 export function DecoShapes({ shapes, className = "", animation = "scale" }: Props) {
+  if (animation === "fall") {
+    return <FallingShapes shapes={shapes} className={className} />;
+  }
+
   return (
     <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
       {shapes.map((s, i) => {
         const Comp = SHAPE_MAP[s.type];
-        const isFall = animation === "fall";
         return (
           <motion.div
             key={i}
             className="absolute"
-            style={{ left: `${s.x}%`, top: isFall ? undefined : `${s.y}%`, rotate: s.rotate }}
-            initial={
-              isFall
-                ? { opacity: 0, y: -80, rotate: s.rotate - 30 }
-                : { opacity: 0, scale: 0.5 }
-            }
-            animate={
-              isFall
-                ? { opacity: 1, y: `${s.y}vh`, rotate: s.rotate }
-                : { opacity: 1, scale: 1 }
-            }
-            transition={
-              isFall
-                ? { duration: 0.8, delay: s.delay, ease: [0.22, 1, 0.36, 1] }
-                : { duration: 0.5, delay: s.delay, ease: [0.16, 1, 0.3, 1] }
-            }
+            style={{ left: `${s.x}%`, top: `${s.y}%`, rotate: s.rotate }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: s.delay, ease: [0.16, 1, 0.3, 1] }}
           >
             <Comp color={s.color} size={s.size} />
           </motion.div>
         );
       })}
     </div>
+  );
+}
+
+function FallingShapes({ shapes, className = "" }: { shapes: Shape[]; className?: string }) {
+  return (
+    <>
+      <style>{`
+        @keyframes shape-fall {
+          0% { transform: translateY(-5vh) rotate(var(--r-start)); opacity: 0; }
+          10% { opacity: 0.85; }
+          90% { opacity: 0.85; }
+          100% { transform: translateY(105vh) rotate(var(--r-end)); opacity: 0; }
+        }
+      `}</style>
+      <div className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+        {shapes.map((s, i) => {
+          const Comp = SHAPE_MAP[s.type];
+          const duration = 6 + s.delay * 12;
+          const stagger = i * 0.7;
+          return (
+            <div
+              key={i}
+              className="absolute top-0"
+              style={{
+                left: `${s.x}%`,
+                "--r-start": `${s.rotate - 40}deg`,
+                "--r-end": `${s.rotate + 40}deg`,
+                animation: `shape-fall ${duration}s ${stagger}s ease-in-out infinite`,
+                opacity: 0,
+              } as React.CSSProperties}
+            >
+              <Comp color={s.color} size={s.size} />
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
